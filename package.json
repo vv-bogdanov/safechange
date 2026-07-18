@@ -1,0 +1,33 @@
+{
+  "name": "safechange",
+  "version": "0.0.1",
+  "description": "A Codex-powered CLI for planned, test-first, independently verified code changes.",
+  "type": "module",
+  "bin": {
+    "safechange": "dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/clean.mjs && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "smoke:app-server": "npm run build && node dist/scripts/smoke-app-server.js",
+    "protocol:generate": "npm run build && node dist/scripts/generate-protocol.js --write",
+    "protocol:check": "npm run build && node dist/scripts/generate-protocol.js --check",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "ajv": "8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  },
+  "license": "MIT"
+}

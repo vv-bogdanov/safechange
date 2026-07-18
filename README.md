@@ -9,7 +9,7 @@ App Server over local `stdio` as its only AI runtime.
 
 ## Prerequisites
 
-- Node.js 20 or newer, npm, and Git.
+- Node.js 22 or newer, npm, and Git.
 - The standard `codex` executable available on `PATH` and authenticated for the
   current user.
 - `codex --version` must match the version recorded in

@@ -53,20 +53,20 @@
         "null"
       ]
     },
-    "serviceTier": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "sandbox": {
+    "personality": {
       "anyOf": [
         {
-          "$ref": "#/definitions/SandboxMode"
+          "$ref": "#/definitions/Personality"
         },
         {
           "type": "null"
         }
+      ]
+    },
+    "serviceTier": {
+      "type": [
+        "string",
+        "null"
       ]
     },
     "threadId": {
@@ -85,10 +85,10 @@
         "null"
       ]
     },
-    "personality": {
+    "sandbox": {
       "anyOf": [
         {
-          "$ref": "#/definitions/Personality"
+          "$ref": "#/definitions/SandboxMode"
         },
         {
           "type": "null"

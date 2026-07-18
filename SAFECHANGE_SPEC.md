@@ -1,6 +1,7 @@
 # SafeChange — техническое задание для coding-агента
 
-**Статус:** архитектурная baseline для PoC и MVP  
+**Статус:** принятое исходное ТЗ для PoC и MVP; сохраняется как design record
+
 **Проект:** SafeChange  
 **Трек:** OpenAI Build Week — Developer Tools  
 **Основной стек:** TypeScript / Node.js  
@@ -998,4 +999,3 @@ Coding-агент не должен менять следующие решени
 - Codex subagents and context management: https://developers.openai.com/codex/subagents
 - Codex skills: https://developers.openai.com/codex/build-skills
 - Codex best practices: https://developers.openai.com/codex/learn/best-practices
-

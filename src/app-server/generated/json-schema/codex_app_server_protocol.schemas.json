@@ -5968,39 +5968,6 @@
               "null"
             ]
           },
-          "serviceTier": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "threadSource": {
-            "description": "Optional client-supplied analytics source classification for this thread.",
-            "anyOf": [
-              {
-                "$ref": "#/definitions/v2/ThreadSource"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "ephemeral": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "sandbox": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/v2/SandboxMode"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "serviceName": {
             "type": [
               "string",
@@ -6015,6 +5982,39 @@
               {
                 "type": "null"
               }
+            ]
+          },
+          "ephemeral": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "threadSource": {
+            "description": "Optional client-supplied analytics source classification for this thread.",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/v2/ThreadSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/v2/SandboxMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
             ]
           },
           "model": {
@@ -7333,20 +7333,20 @@
               "null"
             ]
           },
-          "serviceTier": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "sandbox": {
+          "personality": {
             "anyOf": [
               {
-                "$ref": "#/definitions/v2/SandboxMode"
+                "$ref": "#/definitions/v2/Personality"
               },
               {
                 "type": "null"
               }
+            ]
+          },
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
             ]
           },
           "threadId": {
@@ -7365,10 +7365,10 @@
               "null"
             ]
           },
-          "personality": {
+          "sandbox": {
             "anyOf": [
               {
-                "$ref": "#/definitions/v2/Personality"
+                "$ref": "#/definitions/v2/SandboxMode"
               },
               {
                 "type": "null"
@@ -7435,14 +7435,10 @@
           "ephemeral": {
             "type": "boolean"
           },
-          "sandbox": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/v2/SandboxMode"
-              },
-              {
-                "type": "null"
-              }
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
             ]
           },
           "lastTurnId": {
@@ -7465,15 +7461,6 @@
               "null"
             ]
           },
-          "serviceTier": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "threadId": {
-            "type": "string"
-          },
           "threadSource": {
             "description": "Optional client-supplied analytics source classification for this forked thread.",
             "anyOf": [
@@ -7484,6 +7471,19 @@
                 "type": "null"
               }
             ]
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/v2/SandboxMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
           }
         }
       },
@@ -9229,8 +9229,16 @@
           "threadId"
         ],
         "properties": {
-          "threadId": {
-            "type": "string"
+          "personality": {
+            "description": "Override the personality for this turn and subsequent turns.",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/v2/Personality"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "approvalPolicy": {
             "description": "Override the approval policy for this turn and subsequent turns.",
@@ -9260,15 +9268,11 @@
               "null"
             ]
           },
-          "personality": {
-            "description": "Override the personality for this turn and subsequent turns.",
-            "anyOf": [
-              {
-                "$ref": "#/definitions/v2/Personality"
-              },
-              {
-                "type": "null"
-              }
+          "serviceTier": {
+            "description": "Override the service tier for this turn and subsequent turns.",
+            "type": [
+              "string",
+              "null"
             ]
           },
           "cwd": {
@@ -9289,12 +9293,8 @@
               }
             ]
           },
-          "serviceTier": {
-            "description": "Override the service tier for this turn and subsequent turns.",
-            "type": [
-              "string",
-              "null"
-            ]
+          "threadId": {
+            "type": "string"
           },
           "input": {
             "type": "array",
@@ -13327,12 +13327,10 @@
           "thread"
         ],
         "properties": {
-          "sandbox": {
-            "description": "Legacy sandbox policy retained for compatibility. Experimental clients should prefer `activePermissionProfile` for profile provenance.",
-            "allOf": [
-              {
-                "$ref": "#/definitions/v2/SandboxPolicy"
-              }
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
             ]
           },
           "approvalPolicy": {
@@ -13363,10 +13361,12 @@
           "modelProvider": {
             "type": "string"
           },
-          "serviceTier": {
-            "type": [
-              "string",
-              "null"
+          "sandbox": {
+            "description": "Legacy sandbox policy retained for compatibility. Experimental clients should prefer `activePermissionProfile` for profile provenance.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/v2/SandboxPolicy"
+              }
             ]
           },
           "reasoningEffort": {

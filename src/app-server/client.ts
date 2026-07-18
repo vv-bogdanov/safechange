@@ -1,6 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createInterface, type Interface } from "node:readline";
 import { safeEnvironment } from "../environment.js";
+import { VERSION } from "../version.js";
 import type { InitializeParams } from "./generated/types/InitializeParams.js";
 import type { InitializeResponse } from "./generated/types/InitializeResponse.js";
 import type { JsonValue } from "./generated/types/serde_json/JsonValue.js";
@@ -126,7 +127,7 @@ export class AppServerClient {
       clientInfo: {
         name: "safechange",
         title: "SafeChange",
-        version: "0.0.1",
+        version: VERSION,
       },
       capabilities: null,
     };

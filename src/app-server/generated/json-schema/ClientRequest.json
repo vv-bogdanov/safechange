@@ -3526,8 +3526,16 @@
         "threadId"
       ],
       "properties": {
-        "threadId": {
-          "type": "string"
+        "personality": {
+          "description": "Override the personality for this turn and subsequent turns.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Personality"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "approvalPolicy": {
           "description": "Override the approval policy for this turn and subsequent turns.",
@@ -3557,15 +3565,11 @@
             "null"
           ]
         },
-        "personality": {
-          "description": "Override the personality for this turn and subsequent turns.",
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Personality"
-            },
-            {
-              "type": "null"
-            }
+        "serviceTier": {
+          "description": "Override the service tier for this turn and subsequent turns.",
+          "type": [
+            "string",
+            "null"
           ]
         },
         "cwd": {
@@ -3586,12 +3590,8 @@
             }
           ]
         },
-        "serviceTier": {
-          "description": "Override the service tier for this turn and subsequent turns.",
-          "type": [
-            "string",
-            "null"
-          ]
+        "threadId": {
+          "type": "string"
         },
         "input": {
           "type": "array",
@@ -4889,39 +4889,6 @@
             "null"
           ]
         },
-        "serviceTier": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "threadSource": {
-          "description": "Optional client-supplied analytics source classification for this thread.",
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ThreadSource"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "ephemeral": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "sandbox": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SandboxMode"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "serviceName": {
           "type": [
             "string",
@@ -4936,6 +4903,39 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "ephemeral": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "threadSource": {
+          "description": "Optional client-supplied analytics source classification for this thread.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ThreadSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sandbox": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SandboxMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "serviceTier": {
+          "type": [
+            "string",
+            "null"
           ]
         },
         "model": {
@@ -6446,14 +6446,10 @@
         "ephemeral": {
           "type": "boolean"
         },
-        "sandbox": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SandboxMode"
-            },
-            {
-              "type": "null"
-            }
+        "serviceTier": {
+          "type": [
+            "string",
+            "null"
           ]
         },
         "lastTurnId": {
@@ -6476,15 +6472,6 @@
             "null"
           ]
         },
-        "serviceTier": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "threadId": {
-          "type": "string"
-        },
         "threadSource": {
           "description": "Optional client-supplied analytics source classification for this forked thread.",
           "anyOf": [
@@ -6495,6 +6482,19 @@
               "type": "null"
             }
           ]
+        },
+        "sandbox": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SandboxMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "threadId": {
+          "type": "string"
         }
       }
     },
@@ -6661,20 +6661,20 @@
             "null"
           ]
         },
-        "serviceTier": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "sandbox": {
+        "personality": {
           "anyOf": [
             {
-              "$ref": "#/definitions/SandboxMode"
+              "$ref": "#/definitions/Personality"
             },
             {
               "type": "null"
             }
+          ]
+        },
+        "serviceTier": {
+          "type": [
+            "string",
+            "null"
           ]
         },
         "threadId": {
@@ -6693,10 +6693,10 @@
             "null"
           ]
         },
-        "personality": {
+        "sandbox": {
           "anyOf": [
             {
-              "$ref": "#/definitions/Personality"
+              "$ref": "#/definitions/SandboxMode"
             },
             {
               "type": "null"

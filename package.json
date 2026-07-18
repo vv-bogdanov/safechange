@@ -1,7 +1,25 @@
 {
   "name": "safechange",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A Codex-powered CLI for planned, test-first, independently verified code changes.",
+  "keywords": [
+    "codex",
+    "developer-tools",
+    "ai-agents",
+    "cli",
+    "git",
+    "test-driven-development",
+    "typescript"
+  ],
+  "homepage": "https://github.com/vv-bogdanov/safechange#readme",
+  "bugs": {
+    "url": "https://github.com/vv-bogdanov/safechange/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vv-bogdanov/safechange.git"
+  },
+  "author": "vv-bogdanov",
   "type": "module",
   "bin": {
     "safechange": "dist/src/cli.js",
@@ -9,10 +27,13 @@
   },
   "files": [
     "dist/src",
-    "dist/scripts",
+    "dist/scripts/setup-demo.js",
+    "dist/scripts/setup-demo.js.map",
     "demo",
     "docs",
-    "README.md"
+    "CHANGELOG.md",
+    "README.md",
+    "SECURITY.md"
   ],
   "engines": {
     "node": ">=22"
@@ -32,17 +53,26 @@
     "package:smoke": "npm run build && node dist/scripts/package-smoke.js",
     "protocol:generate": "npm run build && node dist/scripts/generate-protocol.js --write",
     "protocol:check": "npm run build && node dist/scripts/generate-protocol.js --check",
-    "security:audit": "npm audit --audit-level=moderate",
+    "release:check": "node scripts/verify-release-tag.mjs",
+    "security:audit": "npm audit --audit-level=moderate && npm run security:audit:demo",
+    "security:audit:demo": "npm audit --prefix demo/payment-retry-template --audit-level=moderate",
     "security:signatures": "npm audit signatures",
     "ci": "npm run check && npm run typecheck && npm run test:coverage && npm run protocol:check && npm run security:audit && npm run package:smoke",
+    "prepublishOnly": "npm run ci && npm run security:signatures",
     "prepack": "npm run build"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "packageManager": "npm@11.12.1",
   "dependencies": {
     "ajv": "8.20.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",
-    "@openai/codex": "0.144.5",
+    "@openai/codex": "0.144.6",
     "@types/node": "26.1.1",
     "typescript": "7.0.2"
   },

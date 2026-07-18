@@ -56,14 +56,10 @@
     "ephemeral": {
       "type": "boolean"
     },
-    "sandbox": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/SandboxMode"
-        },
-        {
-          "type": "null"
-        }
+    "serviceTier": {
+      "type": [
+        "string",
+        "null"
       ]
     },
     "lastTurnId": {
@@ -86,15 +82,6 @@
         "null"
       ]
     },
-    "serviceTier": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "threadId": {
-      "type": "string"
-    },
     "threadSource": {
       "description": "Optional client-supplied analytics source classification for this forked thread.",
       "anyOf": [
@@ -105,6 +92,19 @@
           "type": "null"
         }
       ]
+    },
+    "sandbox": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/SandboxMode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "threadId": {
+      "type": "string"
     }
   },
   "definitions": {

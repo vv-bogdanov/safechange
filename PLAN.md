@@ -1,8 +1,12 @@
 # SafeChange MVP implementation plan
 
+> **Status:** completed on 2026-07-18. This file is the implementation record for
+> the MVP checkpoints. See [`README.md`](./README.md) for current usage and
+> [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the active development workflow.
+
 ## 1. Goal and current state
 
-The repository currently contains only the product specification and architecture documents. There is no package, source code, test suite, or initial Git commit yet.
+When this plan was written, the repository contained only the product specification and architecture documents. There was no package, source code, test suite, or initial Git commit yet.
 
 The MVP goal is one reproducible vertical workflow for a prepared TypeScript/Node.js payment-retry repository:
 
@@ -20,7 +24,7 @@ preflight
 -> report and branch, or an explicit safe stop
 ```
 
-Implementation must proceed in the stages below. Each stage ends with a runnable, testable product increment. The first increment is read-only planning; write phases are added only after it works against a real repository.
+Implementation proceeded in the stages below. Each stage ended with a runnable, testable product increment. The first increment was read-only planning; write phases were added only after it worked against a real repository.
 
 ## 2. MVP boundary
 

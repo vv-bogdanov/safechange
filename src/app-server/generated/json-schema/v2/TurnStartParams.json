@@ -7,8 +7,16 @@
     "threadId"
   ],
   "properties": {
-    "threadId": {
-      "type": "string"
+    "personality": {
+      "description": "Override the personality for this turn and subsequent turns.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Personality"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "approvalPolicy": {
       "description": "Override the approval policy for this turn and subsequent turns.",
@@ -38,15 +46,11 @@
         "null"
       ]
     },
-    "personality": {
-      "description": "Override the personality for this turn and subsequent turns.",
-      "anyOf": [
-        {
-          "$ref": "#/definitions/Personality"
-        },
-        {
-          "type": "null"
-        }
+    "serviceTier": {
+      "description": "Override the service tier for this turn and subsequent turns.",
+      "type": [
+        "string",
+        "null"
       ]
     },
     "cwd": {
@@ -67,12 +71,8 @@
         }
       ]
     },
-    "serviceTier": {
-      "description": "Override the service tier for this turn and subsequent turns.",
-      "type": [
-        "string",
-        "null"
-      ]
+    "threadId": {
+      "type": "string"
     },
     "input": {
       "type": "array",

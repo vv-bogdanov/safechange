@@ -12,12 +12,10 @@
     "thread"
   ],
   "properties": {
-    "sandbox": {
-      "description": "Legacy sandbox policy retained for compatibility. Experimental clients should prefer `activePermissionProfile` for profile provenance.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/SandboxPolicy"
-        }
+    "serviceTier": {
+      "type": [
+        "string",
+        "null"
       ]
     },
     "approvalPolicy": {
@@ -48,10 +46,12 @@
     "modelProvider": {
       "type": "string"
     },
-    "serviceTier": {
-      "type": [
-        "string",
-        "null"
+    "sandbox": {
+      "description": "Legacy sandbox policy retained for compatibility. Experimental clients should prefer `activePermissionProfile` for profile provenance.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/SandboxPolicy"
+        }
       ]
     },
     "reasoningEffort": {

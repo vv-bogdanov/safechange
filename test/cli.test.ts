@@ -16,6 +16,6 @@ test("runs the CLI through an npm-style symlink", async (t) => {
 
   const { stdout: version } = await execFileAsync(process.execPath, [link, "--version"]);
   const { stdout: help } = await execFileAsync(process.execPath, [link, "--help"]);
-  assert.equal(version, "0.0.1\n");
+  assert.equal(version, "0.1.0\n");
   assert.match(help, /safechange run --task/);
 });

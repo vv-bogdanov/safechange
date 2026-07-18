@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: "1"
+  NO_COLOR: "1"
+
+jobs:
+  publish:
+    name: npm and GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - name: Check out release tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Match tag and package version
+        run: npm run release:check
+      - name: Run release gates
+        run: npm run ci
+      - name: Verify registry signatures and attestations
+        run: npm run security:signatures
+      - name: Create release artifacts directory
+        run: mkdir artifacts
+      - name: Build npm tarball
+        run: npm pack --pack-destination artifacts
+      - name: Generate CycloneDX SBOM
+        run: npm sbom --omit dev --sbom-format cyclonedx > "artifacts/safechange-${GITHUB_REF_NAME#v}.sbom.cdx.json"
+      - name: Generate checksums
+        run: sha256sum artifacts/*.tgz > artifacts/SHA256SUMS
+      - name: Publish to npm with trusted publishing
+        run: npm publish artifacts/*.tgz
+      - name: Create immutable-ready GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" artifacts/* --verify-tag --generate-notes --title "SafeChange ${GITHUB_REF_NAME#v}"

@@ -8,9 +8,8 @@ import { loadArtifact, loadRunState } from "./artifacts.js";
 import { PreflightError } from "./git.js";
 import { resumeRun, runFullWorkflow } from "./orchestrator.js";
 import type { DecisionArtifact } from "./schemas.js";
+import { VERSION } from "./version.js";
 import { runPlanning } from "./workflow.js";
-
-const VERSION = "0.0.1";
 
 const HELP = `SafeChange ${VERSION}
 

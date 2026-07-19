@@ -18,7 +18,7 @@ diff --git a/src/health-service.ts b/src/health-service.ts
 +    }
    }
 @@ -24,3 +35,8 @@ export class HealthService {
-  async startup(): Promise<boolean> {
+   async startup(): Promise<boolean> {
 -    return this.processState.running && this.processState.started;
 +    if (!this.processState.running || !this.processState.started) return false;
 +    try {

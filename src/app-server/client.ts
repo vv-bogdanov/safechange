@@ -281,6 +281,9 @@ export class AppServerClient {
   private readonly stderr = new OutputCapture(64 * 1024);
   private stderrRecorded = false;
   private closing = false;
+  private closePromise: Promise<void> | undefined;
+  private readonly pendingTasks = new Set<Promise<void>>();
+  private pendingTaskError: unknown;
 
   constructor(private readonly options: AppServerClientOptions = {}) {
     this.trace = options.trace;
@@ -330,24 +333,28 @@ export class AppServerClient {
 
     this.process.on("exit", (code, signal) => {
       if (this.closing) {
-        void this.trace?.append({
-          component: "app-server",
-          event: "process.exited",
-          status: "completed",
-          exitCode: code,
-          signal,
-        });
+        this.trackTask(
+          this.trace?.append({
+            component: "app-server",
+            event: "process.exited",
+            status: "completed",
+            exitCode: code,
+            signal,
+          }),
+        );
         return;
       }
       const error = new AppServerError(`App Server exited (${signal ?? String(code)})`);
-      void this.trace?.recordFailure("app-server", "process.exited", error, {
-        exitCode: code,
-        signal,
-      });
+      this.trackTask(
+        this.trace?.recordFailure("app-server", "process.exited", error, {
+          exitCode: code,
+          signal,
+        }),
+      );
       this.failAll(error);
     });
     this.process.on("error", (error) => {
-      void this.trace?.recordFailure("app-server", "process.error", error);
+      this.trackTask(this.trace?.recordFailure("app-server", "process.error", error));
       this.failAll(new AppServerError(error.message));
     });
     this.process.stderr.on("data", (chunk: Buffer) => this.stderr.append(chunk));
@@ -356,7 +363,7 @@ export class AppServerClient {
     this.lines.on("line", (line) => this.handleLine(line));
     this.abortListener = () => {
       this.failAll(new AppServerError("App Server operation was aborted"));
-      void this.close();
+      void this.close().catch(() => undefined);
     };
     this.options.signal?.addEventListener("abort", this.abortListener, { once: true });
 
@@ -524,7 +531,12 @@ export class AppServerClient {
     }
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
+    this.closePromise ??= this.closeDirect();
+    return this.closePromise;
+  }
+
+  private async closeDirect(): Promise<void> {
     if (this.abortListener) {
       this.options.signal?.removeEventListener("abort", this.abortListener);
       this.abortListener = undefined;
@@ -532,6 +544,7 @@ export class AppServerClient {
     const child = this.process;
     if (!child) {
       await this.recordStderr();
+      await this.flushPendingTasks();
       return;
     }
 
@@ -540,6 +553,7 @@ export class AppServerClient {
     this.closing = true;
     if (child.exitCode !== null || child.signalCode !== null) {
       await this.recordStderr();
+      await this.flushPendingTasks();
       return;
     }
 
@@ -555,6 +569,7 @@ export class AppServerClient {
       child.kill("SIGTERM");
     });
     await this.recordStderr();
+    await this.flushPendingTasks();
   }
 
   private async request<T>(method: string, params: unknown): Promise<T> {
@@ -669,18 +684,20 @@ export class AppServerClient {
         return;
       }
       const total = params.tokenUsage.total;
-      void this.trace?.append({
-        component: "app-server",
-        event: "token.usage",
-        status: "info",
-        threadId: params.threadId,
-        turnId: params.turnId,
-        totalTokens: total.totalTokens,
-        inputTokens: total.inputTokens,
-        cachedInputTokens: total.cachedInputTokens,
-        outputTokens: total.outputTokens,
-        reasoningTokens: total.reasoningOutputTokens,
-      });
+      this.trackTask(
+        this.trace?.append({
+          component: "app-server",
+          event: "token.usage",
+          status: "info",
+          threadId: params.threadId,
+          turnId: params.turnId,
+          totalTokens: total.totalTokens,
+          inputTokens: total.inputTokens,
+          cachedInputTokens: total.cachedInputTokens,
+          outputTokens: total.outputTokens,
+          reasoningTokens: total.reasoningOutputTokens,
+        }),
+      );
       return;
     }
 
@@ -698,14 +715,16 @@ export class AppServerClient {
       }
       const itemTrace = toolItemTrace(params.item);
       if (itemTrace) {
-        void this.trace?.append({
-          component: "app-server",
-          event: "item.completed",
-          status: itemTrace.toolFailed ? "failed" : "completed",
-          threadId: params.threadId,
-          turnId: params.turnId,
-          ...itemTrace,
-        });
+        this.trackTask(
+          this.trace?.append({
+            component: "app-server",
+            event: "item.completed",
+            status: itemTrace.toolFailed ? "failed" : "completed",
+            threadId: params.threadId,
+            turnId: params.turnId,
+            ...itemTrace,
+          }),
+        );
       }
       return;
     }
@@ -767,9 +786,27 @@ export class AppServerClient {
   private failProtocol(message: string, evidence: Partial<TraceEventInput> = {}): void {
     const error = new AppServerError(message);
     this.fatalError = error;
-    void this.trace?.recordFailure("app-server", "protocol.message", error, evidence);
+    this.trackTask(this.trace?.recordFailure("app-server", "protocol.message", error, evidence));
     this.failAll(error);
-    void this.close();
+    void this.close().catch(() => undefined);
+  }
+
+  private trackTask(task: Promise<unknown> | undefined): void {
+    if (!task) return;
+    const tracked = task
+      .then(
+        () => undefined,
+        (error: unknown) => {
+          this.pendingTaskError ??= error;
+        },
+      )
+      .finally(() => this.pendingTasks.delete(tracked));
+    this.pendingTasks.add(tracked);
+  }
+
+  private async flushPendingTasks(): Promise<void> {
+    while (this.pendingTasks.size > 0) await Promise.all(this.pendingTasks);
+    if (this.pendingTaskError) throw this.pendingTaskError;
   }
 
   private async recordStderr(): Promise<void> {

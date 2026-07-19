@@ -163,7 +163,18 @@ test("persists fork lineage and privacy-safe tool metrics", async (t) => {
 });
 
 test("fails closed on malformed token usage without persisting its body", async (t) => {
+  let failurePersisted = false;
   await withTracedFakeClient(t, "malformed-token-usage", async (client, trace) => {
+    const recordFailure = trace.recordFailure.bind(trace);
+    t.mock.method(
+      trace,
+      "recordFailure",
+      async (...args: Parameters<TraceWriter["recordFailure"]>) => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        await recordFailure(...args);
+        failurePersisted = true;
+      },
+    );
     const thread = await startReadOnlyThread(client);
     await assert.rejects(
       client.runTurn(thread.thread.id, "Return the smoke artifact.", {
@@ -178,6 +189,7 @@ test("fails closed on malformed token usage without persisting its body", async 
     assert.equal(failure?.status, "failed");
     assert.doesNotMatch(await readFile(document.tracePath, "utf8"), /inputTokens.*invalid/u);
   });
+  assert.equal(failurePersisted, true);
 });
 
 test("fails closed on a malformed App Server error response", async () => {

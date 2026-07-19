@@ -1,33 +1,17 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
-import { promisify } from "node:util";
 import {
   acquireRepositoryLock,
   createSafeChangeBranch,
   inspectBaseline,
   PreflightError,
 } from "../src/git.js";
-
-const execFileAsync = promisify(execFile);
-
-async function fixtureRepo(): Promise<string> {
-  const path = await mkdtemp(join(tmpdir(), "safechange-git-"));
-  await writeFile(join(path, "tracked.txt"), "baseline\n", "utf8");
-  await execFileAsync("git", ["init", "-b", "main"], { cwd: path });
-  await execFileAsync("git", ["config", "user.name", "SafeChange Test"], { cwd: path });
-  await execFileAsync("git", ["config", "user.email", "test@safechange.local"], { cwd: path });
-  await execFileAsync("git", ["add", "."], { cwd: path });
-  await execFileAsync("git", ["commit", "-m", "baseline"], { cwd: path });
-  return path;
-}
+import { createTestRepo } from "./support/repository.js";
 
 test("blocks a write phase when non-ignored untracked files exist", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
+  const repoPath = await createTestRepo(t, { files: { "tracked.txt": "baseline\n" } });
   const baseline = await inspectBaseline(repoPath);
   await writeFile(join(repoPath, "user-notes.txt"), "do not commit\n", "utf8");
 
@@ -39,8 +23,7 @@ test("blocks a write phase when non-ignored untracked files exist", async (t) =>
 });
 
 test("allows only one SafeChange writer per repository", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
+  const repoPath = await createTestRepo(t, { files: { "tracked.txt": "baseline\n" } });
 
   const lock = await acquireRepositoryLock(repoPath, "run-1");
   await assert.rejects(

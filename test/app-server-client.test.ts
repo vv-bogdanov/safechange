@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
-import { join } from "node:path";
 import test from "node:test";
-import { AppServerClient } from "../src/app-server/client.js";
+import type { AppServerClient } from "../src/app-server/client.js";
 import { smokeArtifactSchema, validateSmokeArtifact } from "../src/schemas.js";
+import { withFakeClient } from "./support/app-server.js";
 
-const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
+async function startReadOnlyThread(client: AppServerClient) {
+  await client.start();
+  return client.startThread({
+    cwd: process.cwd(),
+    approvalPolicy: "never",
+    sandbox: "read-only",
+  });
+}
 
 test("completes the App Server handshake and one structured turn", async () => {
-  const client = new AppServerClient({
-    command: process.execPath,
-    args: [fixture, "expect-spark"],
-    requestTimeoutMs: 1_000,
-    turnTimeoutMs: 1_000,
-  });
-
-  try {
+  await withFakeClient("expect-spark", async (client) => {
     const initialized = await client.start();
     assert.equal(initialized.userAgent, "fake-app-server");
 
@@ -37,26 +37,12 @@ test("completes the App Server handshake and one structured turn", async () => {
       kind: "smoke",
       message: "ok",
     });
-  } finally {
-    await client.close();
-  }
+  });
 });
 
 test("rejects unsupported App Server requests and continues the turn", async () => {
-  const client = new AppServerClient({
-    command: process.execPath,
-    args: [fixture, "server-request"],
-    requestTimeoutMs: 1_000,
-    turnTimeoutMs: 1_000,
-  });
-
-  try {
-    await client.start();
-    const thread = await client.startThread({
-      cwd: process.cwd(),
-      approvalPolicy: "never",
-      sandbox: "read-only",
-    });
+  await withFakeClient("server-request", async (client) => {
+    const thread = await startReadOnlyThread(client);
     const result = await client.runTurn(thread.thread.id, "Return the smoke artifact.", {
       cwd: process.cwd(),
       sandboxPolicy: { type: "readOnly", networkAccess: false },
@@ -66,26 +52,12 @@ test("rejects unsupported App Server requests and continues the turn", async () 
       kind: "smoke",
       message: "ok",
     });
-  } finally {
-    await client.close();
-  }
+  });
 });
 
 test("fails closed on a malformed App Server notification", async () => {
-  const client = new AppServerClient({
-    command: process.execPath,
-    args: [fixture, "malformed-notification"],
-    requestTimeoutMs: 1_000,
-    turnTimeoutMs: 1_000,
-  });
-
-  try {
-    await client.start();
-    const thread = await client.startThread({
-      cwd: process.cwd(),
-      approvalPolicy: "never",
-      sandbox: "read-only",
-    });
+  await withFakeClient("malformed-notification", async (client) => {
+    const thread = await startReadOnlyThread(client);
     await assert.rejects(
       client.runTurn(thread.thread.id, "Return the smoke artifact.", {
         cwd: process.cwd(),
@@ -94,7 +66,5 @@ test("fails closed on a malformed App Server notification", async () => {
       }),
       /Invalid item\/completed notification/,
     );
-  } finally {
-    await client.close();
-  }
+  });
 });

@@ -1,63 +1,44 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
-import { promisify } from "node:util";
-import { AppServerClient } from "../src/app-server/client.js";
-import type { RunState } from "../src/artifacts.js";
+import test, { type TestContext } from "node:test";
 import { PreflightError } from "../src/git.js";
 import { runHarness } from "../src/harness.js";
 import { runImplementationAndVerification } from "../src/implementation.js";
 import { validateResumeBoundary } from "../src/orchestrator.js";
 import { runPlanning } from "../src/workflow.js";
-
-const execFileAsync = promisify(execFile);
+import { fakeAppServerFactory } from "./support/app-server.js";
+import { createTestRepo, git, readRunState } from "./support/repository.js";
 
 async function fixtureRepo(
+  t: TestContext,
   testScript = "node --test",
   scripts: Record<string, string> = {},
 ): Promise<string> {
-  const path = await mkdtemp(join(tmpdir(), "safechange-plan-"));
-  await mkdir(join(path, "src"));
-  await writeFile(join(path, "AGENTS.md"), "# Fixture\n", "utf8");
-  await writeFile(
-    join(path, "package.json"),
-    `${JSON.stringify({ name: "fixture", scripts: { test: testScript, ...scripts } }, null, 2)}\n`,
-    "utf8",
-  );
-  await writeFile(join(path, "src", "value.ts"), "export const value = 1;\n", "utf8");
-  await execFileAsync("git", ["init", "-b", "main"], { cwd: path });
-  await execFileAsync("git", ["config", "user.name", "SafeChange Test"], { cwd: path });
-  await execFileAsync("git", ["config", "user.email", "test@safechange.local"], { cwd: path });
-  await execFileAsync("git", ["add", "."], { cwd: path });
-  await execFileAsync("git", ["commit", "-m", "fixture baseline"], { cwd: path });
-  return path;
+  return createTestRepo(t, {
+    prefix: "safechange-plan-",
+    files: {
+      "AGENTS.md": "# Fixture\n",
+      "package.json": `${JSON.stringify({ name: "fixture", scripts: { test: testScript, ...scripts } }, null, 2)}\n`,
+      "src/value.ts": "export const value = 1;\n",
+    },
+  });
 }
 
 test("runs D0 and C0 as roots and decision roles as C0 forks", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
+  const repoPath = await fixtureRepo(t);
 
   const result = await runPlanning({
     repoPath,
     task: "Add the requested fixture behavior without changing the public API.",
     plannerCount: 3,
-    clientFactory: () =>
-      new AppServerClient({
-        command: process.execPath,
-        args: [fixture, "out-of-order"],
-        requestTimeoutMs: 1_000,
-        turnTimeoutMs: 1_000,
-      }),
+    clientFactory: fakeAppServerFactory(repoPath, "out-of-order"),
     parallelPlanners: true,
   });
 
   assert.equal(result.status, "PLANNED");
   assert.equal(result.decision?.winnerPlanId, "plan-1");
-  const state = JSON.parse(await readFile(join(result.runPath, "state.json"), "utf8")) as RunState;
+  const state = await readRunState(result.runPath);
   const discovery = state.contexts.find((entry) => entry.role === "discovery");
   const contract = state.contexts.find((entry) => entry.role === "contract");
   assert.ok(discovery);
@@ -75,18 +56,12 @@ test("runs D0 and C0 as roots and decision roles as C0 forks", async (t) => {
     assert.equal(entry.checkpointTurnId, contract.turnId);
   }
 
-  const { stdout: status } = await execFileAsync(
-    "git",
-    ["status", "--porcelain=v1", "--untracked-files=no"],
-    { cwd: repoPath },
-  );
-  assert.equal(status, "");
+  assert.equal(await git(repoPath, ["status", "--porcelain=v1", "--untracked-files=no"]), "");
   assert.match(await readFile(result.reportPath, "utf8"), /Selected `plan-1`/);
 });
 
 test("blocks before App Server work when tracked state is dirty", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
+  const repoPath = await fixtureRepo(t);
   await writeFile(join(repoPath, "src", "value.ts"), "export const value = 2;\n", "utf8");
 
   await assert.rejects(
@@ -104,24 +79,16 @@ test("blocks before App Server work when tracked state is dirty", async (t) => {
 });
 
 test("corrects one planner artifact in the same fork before Judge", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
+  const repoPath = await fixtureRepo(t);
   const result = await runPlanning({
     repoPath,
     task: "Change the fixture value.",
     plannerCount: 1,
-    clientFactory: () =>
-      new AppServerClient({
-        command: process.execPath,
-        args: [fixture, "planner-correction"],
-        requestTimeoutMs: 1_000,
-        turnTimeoutMs: 1_000,
-      }),
+    clientFactory: fakeAppServerFactory(repoPath, "planner-correction"),
   });
 
   assert.equal(result.status, "PLANNED");
-  const state = JSON.parse(await readFile(join(result.runPath, "state.json"), "utf8")) as RunState;
+  const state = await readRunState(result.runPath);
   const planner = state.contexts.find((entry) => entry.role === "planner:plan-1");
   const correction = state.contexts.find((entry) => entry.role === "planner-correction:plan-1");
   assert.equal(correction?.threadId, planner?.threadId);
@@ -129,24 +96,16 @@ test("corrects one planner artifact in the same fork before Judge", async (t) =>
 });
 
 test("corrects one Judge decision in the same fork before planning completes", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
+  const repoPath = await fixtureRepo(t);
   const result = await runPlanning({
     repoPath,
     task: "Change the fixture value.",
     plannerCount: 1,
-    clientFactory: () =>
-      new AppServerClient({
-        command: process.execPath,
-        args: [fixture, "judge-correction"],
-        requestTimeoutMs: 1_000,
-        turnTimeoutMs: 1_000,
-      }),
+    clientFactory: fakeAppServerFactory(repoPath, "judge-correction"),
   });
 
   assert.equal(result.status, "PLANNED");
-  const state = JSON.parse(await readFile(join(result.runPath, "state.json"), "utf8")) as RunState;
+  const state = await readRunState(result.runPath);
   const judge = state.contexts.find((entry) => entry.role === "judge");
   const correction = state.contexts.find((entry) => entry.role === "judge-correction");
   assert.equal(correction?.threadId, judge?.threadId);
@@ -154,20 +113,9 @@ test("corrects one Judge decision in the same fork before planning completes", a
 });
 
 test("creates a failing-first safety harness on a branch and commits T1", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
-  const { stdout: baseline } = await execFileAsync("git", ["rev-parse", "HEAD"], {
-    cwd: repoPath,
-  });
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath);
+  const baseline = await git(repoPath, ["rev-parse", "HEAD"]);
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value without changing its export.",
@@ -184,22 +132,13 @@ test("creates a failing-first safety harness on a branch and commits T1", async 
   assert.match(harness.branch, /^safechange\//);
   assert.equal(harness.command.exitCode, 1);
   assert.deepEqual(Object.keys(harness.protectedHashes), ["test/value.test.ts"]);
-  const { stdout: changed } = await execFileAsync(
-    "git",
-    ["diff", "--name-only", baseline.trim(), harness.testCommit],
-    { cwd: repoPath },
+  assert.equal(
+    await git(repoPath, ["diff", "--name-only", baseline, harness.testCommit]),
+    "test/value.test.ts",
   );
-  assert.equal(changed.trim(), "test/value.test.ts");
-  const { stdout: log } = await execFileAsync("git", ["log", "--format=%s", "--reverse"], {
-    cwd: repoPath,
-  });
-  assert.deepEqual(log.trim().split("\n"), [
-    "fixture baseline",
-    "test: add SafeChange safety harness",
-  ]);
-  const state = JSON.parse(
-    await readFile(join(planning.runPath, "state.json"), "utf8"),
-  ) as RunState;
+  const log = await git(repoPath, ["log", "--format=%s", "--reverse"]);
+  assert.deepEqual(log.split("\n"), ["fixture baseline", "test: add SafeChange safety harness"]);
+  const state = await readRunState(planning.runPath);
   assert.equal(state.testCommit, harness.testCommit);
   assert.equal(state.phase, "harness-complete");
   const contract = state.contexts.find((entry) => entry.role === "contract");
@@ -209,18 +148,10 @@ test("creates a failing-first safety harness on a branch and commits T1", async 
 
 test("stops when the baseline repository test script changes protected configuration", async (t) => {
   const repoPath = await fixtureRepo(
+    t,
     `node -e "require('node:fs').writeFileSync('.env', 'changed')" && node --test`,
   );
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
+  const clientFactory = fakeAppServerFactory(repoPath);
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value without changing its export.",
@@ -232,25 +163,14 @@ test("stops when the baseline repository test script changes protected configura
     runHarness({ repoPath, runId: planning.runId, clientFactory }),
     /Protected configuration metadata changed/,
   );
-  const state = JSON.parse(
-    await readFile(join(planning.runPath, "state.json"), "utf8"),
-  ) as RunState;
+  const state = await readRunState(planning.runPath);
   assert.equal(state.status, "FAILED");
   assert.equal(Boolean(state.testCommit), false);
 });
 
 test("creates I1, preserves T1, runs commands, and verifies from a fresh C0 fork", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath);
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value without changing its export.",
@@ -278,31 +198,25 @@ test("creates I1, preserves T1, runs commands, and verifies from a fresh C0 fork
     assert.equal("cwd" in command, false);
     assert.equal("argv" in command, false);
   }
-  const state = JSON.parse(
-    await readFile(join(planning.runPath, "state.json"), "utf8"),
-  ) as RunState;
+  const state = await readRunState(planning.runPath);
   assert.equal(state.implementationCommit, implementation.implementationCommit);
   assert.equal(state.phase, "verification-complete");
   const harnessArtifact = JSON.parse(
     await readFile(join(planning.runPath, "harness.json"), "utf8"),
   ) as { payload: { protectedHashes: Record<string, string> } };
   assert.equal(harnessArtifact.payload.protectedHashes["test/value.test.ts"], protectedBefore);
-  const { stdout: t1ToI1 } = await execFileAsync(
-    "git",
-    ["diff", "--name-only", state.testCommit, state.implementationCommit],
-    { cwd: repoPath },
+  assert.equal(
+    await git(repoPath, ["diff", "--name-only", state.testCommit, state.implementationCommit]),
+    "src/value.ts",
   );
-  assert.equal(t1ToI1.trim(), "src/value.ts");
   const contract = state.contexts.find((entry) => entry.role === "contract");
   const implementer = state.contexts.find((entry) => entry.role === "implementer");
   const verifier = state.contexts.find((entry) => entry.role === "verifier");
   assert.equal(implementer?.parentThreadId, contract?.threadId);
   assert.equal(verifier?.parentThreadId, contract?.threadId);
   assert.notEqual(verifier?.parentThreadId, implementer?.threadId);
-  const { stdout: log } = await execFileAsync("git", ["log", "--format=%s", "--reverse"], {
-    cwd: repoPath,
-  });
-  assert.deepEqual(log.trim().split("\n"), [
+  const log = await git(repoPath, ["log", "--format=%s", "--reverse"]);
+  assert.deepEqual(log.split("\n"), [
     "fixture baseline",
     "test: add SafeChange safety harness",
     "feat: implement selected SafeChange plan",
@@ -310,19 +224,10 @@ test("creates I1, preserves T1, runs commands, and verifies from a fresh C0 fork
 });
 
 test("runs the selected plan verification commands without rediscovering package scripts", async (t) => {
-  const repoPath = await fixtureRepo("node --test", {
+  const repoPath = await fixtureRepo(t, "node --test", {
     "check:plan": 'node -e "process.exit(0)"',
   });
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture, "plan-command"],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
+  const clientFactory = fakeAppServerFactory(repoPath, "plan-command");
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value and use the selected verification command.",
@@ -347,17 +252,8 @@ test("runs the selected plan verification commands without rediscovering package
 });
 
 test("resumes the same Implementer once for a local repair and forks a fresh Verifier", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture, "repair"],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath, "repair");
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value without changing its export.",
@@ -373,9 +269,7 @@ test("resumes the same Implementer once for a local repair and forks a fresh Ver
   });
 
   assert.equal(result.accepted, true);
-  const state = JSON.parse(
-    await readFile(join(planning.runPath, "state.json"), "utf8"),
-  ) as RunState;
+  const state = await readRunState(planning.runPath);
   assert.equal(state.repairCount, 1);
   const implementer = state.contexts.find((entry) => entry.role === "implementer");
   const repair = state.contexts.find((entry) => entry.role === "repair");
@@ -383,10 +277,8 @@ test("resumes the same Implementer once for a local repair and forks a fresh Ver
   assert.equal(repair?.threadId, implementer?.threadId);
   assert.equal(verifiers.length, 2);
   assert.notEqual(verifiers[0]?.threadId, verifiers[1]?.threadId);
-  const { stdout: log } = await execFileAsync("git", ["log", "--format=%s", "--reverse"], {
-    cwd: repoPath,
-  });
-  assert.deepEqual(log.trim().split("\n"), [
+  const log = await git(repoPath, ["log", "--format=%s", "--reverse"]);
+  assert.deepEqual(log.split("\n"), [
     "fixture baseline",
     "test: add SafeChange safety harness",
     "feat: implement selected SafeChange plan",
@@ -395,20 +287,12 @@ test("resumes the same Implementer once for a local repair and forks a fresh Ver
 });
 
 test("refuses a planning resume when a persisted artifact hash changed", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
+  const repoPath = await fixtureRepo(t);
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value.",
     plannerCount: 1,
-    clientFactory: () =>
-      new AppServerClient({
-        command: process.execPath,
-        args: [fixture],
-        requestTimeoutMs: 1_000,
-        turnTimeoutMs: 1_000,
-      }),
+    clientFactory: fakeAppServerFactory(repoPath),
   });
   await validateResumeBoundary(repoPath, planning.runId);
   await writeFile(join(planning.runPath, "contract.json"), "{}\n", "utf8");
@@ -420,17 +304,8 @@ test("refuses a planning resume when a persisted artifact hash changed", async (
 });
 
 test("stops when the Implementer edits a protected T1 path", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture, "protected-edit"],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath, "protected-edit");
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value.",
@@ -446,39 +321,22 @@ test("stops when the Implementer edits a protected T1 path", async (t) => {
 });
 
 test("rejects malformed role output locally", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
+  const repoPath = await fixtureRepo(t);
 
   await assert.rejects(
     runPlanning({
       repoPath,
       task: "Change the fixture value.",
       plannerCount: 1,
-      clientFactory: () =>
-        new AppServerClient({
-          command: process.execPath,
-          args: [fixture, "malformed"],
-          requestTimeoutMs: 1_000,
-          turnTimeoutMs: 1_000,
-        }),
+      clientFactory: fakeAppServerFactory(repoPath, "malformed"),
     }),
     /Invalid evidence artifact/,
   );
 });
 
 test("marks a clean but changed baseline before the first write", async (t) => {
-  const repoPath = await fixtureRepo();
-  t.after(async () => rm(repoPath, { recursive: true, force: true }));
-  const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-  const clientFactory = (): AppServerClient =>
-    new AppServerClient({
-      command: process.execPath,
-      args: [fixture],
-      cwd: repoPath,
-      requestTimeoutMs: 1_000,
-      turnTimeoutMs: 1_000,
-    });
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath);
   const planning = await runPlanning({
     repoPath,
     task: "Change the fixture value.",
@@ -486,16 +344,14 @@ test("marks a clean but changed baseline before the first write", async (t) => {
     clientFactory,
   });
   await writeFile(join(repoPath, "README.md"), "changed baseline\n", "utf8");
-  await execFileAsync("git", ["add", "README.md"], { cwd: repoPath });
-  await execFileAsync("git", ["commit", "-m", "change baseline"], { cwd: repoPath });
+  await git(repoPath, ["add", "README.md"]);
+  await git(repoPath, ["commit", "-m", "change baseline"]);
 
   await assert.rejects(
     runHarness({ repoPath, runId: planning.runId, clientFactory }),
     /Baseline no longer matches/,
   );
-  const state = JSON.parse(
-    await readFile(join(planning.runPath, "state.json"), "utf8"),
-  ) as RunState;
+  const state = await readRunState(planning.runPath);
   assert.equal(state.status, "BASELINE_CHANGED");
 });
 
@@ -520,17 +376,8 @@ for (const scenario of [
   },
 ] as const) {
   test(`stops on ${scenario.name}`, async (t) => {
-    const repoPath = await fixtureRepo();
-    t.after(async () => rm(repoPath, { recursive: true, force: true }));
-    const fixture = join(process.cwd(), "dist", "test", "fixtures", "fake-app-server.js");
-    const clientFactory = (): AppServerClient =>
-      new AppServerClient({
-        command: process.execPath,
-        args: [fixture, scenario.mode],
-        cwd: repoPath,
-        requestTimeoutMs: 1_000,
-        turnTimeoutMs: 1_000,
-      });
+    const repoPath = await fixtureRepo(t);
+    const clientFactory = fakeAppServerFactory(repoPath, scenario.mode);
     const planning = await runPlanning({
       repoPath,
       task: "Change the fixture value.",
@@ -543,9 +390,7 @@ for (const scenario of [
       runImplementationAndVerification({ repoPath, runId: planning.runId, clientFactory }),
       scenario.message,
     );
-    const state = JSON.parse(
-      await readFile(join(planning.runPath, "state.json"), "utf8"),
-    ) as RunState;
+    const state = await readRunState(planning.runPath);
     assert.equal(state.status, scenario.status);
     if (scenario.mode === "failed-command") {
       const commands = JSON.parse(

@@ -3,22 +3,53 @@
     {
       "id": "late-item-progress",
       "patch": "late-item-progress.patch",
-      "expectedFailures": ["partial-boundary-replay"]
+      "expectedFailures": [
+        "partial-boundary-replay",
+        "cross-instance-replay",
+        "input-conflict",
+        "resume-key-isolation",
+        "callback-exactly-once",
+        "input-immutability"
+      ]
     },
     {
       "id": "process-local-completion",
       "patch": "process-local-completion.patch",
-      "expectedFailures": ["partial-boundary-replay", "cross-instance-replay"]
+      "expectedFailures": [
+        "partial-boundary-replay",
+        "cross-instance-replay",
+        "concurrent-replay",
+        "input-conflict",
+        "resume-key-isolation",
+        "callback-exactly-once",
+        "input-immutability"
+      ]
     },
     {
       "id": "inventory-only-idempotency",
       "patch": "inventory-only-idempotency.patch",
-      "expectedFailures": ["partial-boundary-replay", "callback-exactly-once"]
+      "expectedFailures": [
+        "partial-boundary-replay",
+        "cross-instance-replay",
+        "concurrent-replay",
+        "input-conflict",
+        "resume-key-isolation",
+        "callback-exactly-once",
+        "input-immutability"
+      ]
     },
     {
       "id": "swallowed-completion",
       "patch": "swallowed-completion.patch",
-      "expectedFailures": ["partial-boundary-replay"]
+      "expectedFailures": [
+        "partial-boundary-replay",
+        "cross-instance-replay",
+        "concurrent-replay",
+        "input-conflict",
+        "resume-key-isolation",
+        "callback-exactly-once",
+        "input-immutability"
+      ]
     },
     {
       "id": "token-only-reuse",
@@ -28,7 +59,15 @@
     {
       "id": "global-completion-cache",
       "patch": "global-completion-cache.patch",
-      "expectedFailures": ["partial-boundary-replay", "state-isolation"]
+      "expectedFailures": [
+        "partial-boundary-replay",
+        "cross-instance-replay",
+        "input-conflict",
+        "resume-key-isolation",
+        "callback-exactly-once",
+        "state-isolation",
+        "input-immutability"
+      ]
     }
   ]
 }

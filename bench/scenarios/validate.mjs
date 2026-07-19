@@ -62,12 +62,10 @@ export async function validateScenario(scenarioRoot) {
       const failedChecks = result.checks.filter((check) => !check.passed).map((check) => check.id);
       assert(result.summary.visible, `${mutant.id} must remain visible-green`);
       assert(!result.passed, `${mutant.id} unexpectedly passed the hidden evaluator`);
-      for (const expectedFailure of mutant.expectedFailures) {
-        assert(
-          failedChecks.includes(expectedFailure),
-          `${mutant.id} did not demonstrate ${expectedFailure}`,
-        );
-      }
+      assert(
+        JSON.stringify(failedChecks) === JSON.stringify(mutant.expectedFailures),
+        `${mutant.id} failure contract drifted: expected ${JSON.stringify(mutant.expectedFailures)}, got ${JSON.stringify(failedChecks)}`,
+      );
       mutants.push({ id: mutant.id, outcome: "unsafe_green", failedChecks });
     }
 

@@ -3,12 +3,23 @@
     {
       "id": "producer-only",
       "patch": "producer-only.patch",
-      "expectedFailures": ["coordinated-discount", "empty-discount"]
+      "expectedFailures": [
+        "coordinated-discount",
+        "empty-discount",
+        "numeric-precision",
+        "unknown-field-tolerance",
+        "replay-ordering"
+      ]
     },
     {
       "id": "consumer-only",
       "patch": "consumer-only.patch",
-      "expectedFailures": ["coordinated-discount", "empty-discount"]
+      "expectedFailures": [
+        "coordinated-discount",
+        "empty-discount",
+        "unknown-field-tolerance",
+        "replay-ordering"
+      ]
     },
     {
       "id": "lossy-numeric-conversion",
@@ -23,7 +34,13 @@
     {
       "id": "version-check-inversion",
       "patch": "version-check-inversion.patch",
-      "expectedFailures": ["coordinated-discount", "empty-discount"]
+      "expectedFailures": [
+        "coordinated-discount",
+        "empty-discount",
+        "numeric-precision",
+        "unknown-field-tolerance",
+        "replay-ordering"
+      ]
     },
     {
       "id": "replay-order-regression",

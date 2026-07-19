@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "contract-drift",
-  "version": 2,
+  "version": 3,
   "visibleChecks": [
     { "argv": ["node", "--test"], "cwd": "producer" },
     { "argv": ["python", "-m", "pytest"], "cwd": "consumer" }

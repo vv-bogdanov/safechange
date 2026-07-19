@@ -3,22 +3,50 @@
     {
       "id": "late-audit-completion",
       "patch": "late-audit-completion.patch",
-      "expectedFailures": ["partial-boundary-retry", "reentrant-cancellation"]
+      "expectedFailures": [
+        "partial-boundary-retry",
+        "cross-instance-retry",
+        "reentrant-cancellation",
+        "input-conflict",
+        "retry-key-isolation"
+      ]
     },
     {
       "id": "static-completion-cache",
       "patch": "static-completion-cache.patch",
-      "expectedFailures": ["partial-boundary-retry", "state-isolation"]
+      "expectedFailures": [
+        "partial-boundary-retry",
+        "cross-instance-retry",
+        "reentrant-cancellation",
+        "input-conflict",
+        "retry-key-isolation",
+        "hook-exactly-once",
+        "state-isolation"
+      ]
     },
     {
       "id": "refund-only-idempotency",
       "patch": "refund-only-idempotency.patch",
-      "expectedFailures": ["partial-boundary-retry", "hook-exactly-once"]
+      "expectedFailures": [
+        "partial-boundary-retry",
+        "cross-instance-retry",
+        "reentrant-cancellation",
+        "input-conflict",
+        "retry-key-isolation",
+        "hook-exactly-once"
+      ]
     },
     {
       "id": "swallowed-completion",
       "patch": "swallowed-completion.patch",
-      "expectedFailures": ["partial-boundary-retry"]
+      "expectedFailures": [
+        "partial-boundary-retry",
+        "cross-instance-retry",
+        "reentrant-cancellation",
+        "input-conflict",
+        "retry-key-isolation",
+        "hook-exactly-once"
+      ]
     },
     {
       "id": "token-only-reuse",
@@ -28,7 +56,15 @@
     {
       "id": "precommitted-completion",
       "patch": "precommitted-completion.patch",
-      "expectedFailures": ["partial-boundary-retry", "state-isolation"]
+      "expectedFailures": [
+        "partial-boundary-retry",
+        "cross-instance-retry",
+        "reentrant-cancellation",
+        "input-conflict",
+        "retry-key-isolation",
+        "hook-exactly-once",
+        "state-isolation"
+      ]
     }
   ]
 }

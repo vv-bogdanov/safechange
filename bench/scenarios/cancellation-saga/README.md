@@ -12,3 +12,6 @@ attempts without sleeps or external services.
 The standard PHP runner keeps the scenario dependency-free and offline. PHP and Composer versions
 are recorded; PHPUnit is intentionally not claimed because it is not installed in the prepared
 environment. The PHP evaluator, reference patch, and unsafe mutants remain controller-owned.
+
+Scenario version 2 records every hidden failure demonstrated by each mutant as an exact oracle
+contract. Candidate behavior, the reference patch, and the mutant implementations are unchanged.

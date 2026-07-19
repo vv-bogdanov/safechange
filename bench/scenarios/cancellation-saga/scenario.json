@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cancellation-saga",
-  "version": 1,
+  "version": 2,
   "visibleChecks": [{ "argv": ["php", "tests/run.php"], "cwd": "." }],
   "preparation": [],
   "testPaths": { "prefixes": ["tests"], "patterns": ["*_test.php"] },

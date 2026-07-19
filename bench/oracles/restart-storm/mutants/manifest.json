@@ -1,14 +1,46 @@
 {
   "mutants": [
     {
-      "id": "database-in-liveness",
-      "patch": "database-in-liveness.patch",
-      "expectedFailures": ["database-outage-readiness", "liveness-preservation"]
+      "id": "sticky-readiness",
+      "patch": "sticky-readiness.patch",
+      "expectedFailures": ["transient-recovery", "repeated-probe-failures"]
+    },
+    {
+      "id": "fail-open-readiness",
+      "patch": "fail-open-readiness.patch",
+      "expectedFailures": ["repeated-probe-failures", "database-errors", "stopped-process"]
+    },
+    {
+      "id": "database-in-startup",
+      "patch": "database-in-startup.patch",
+      "expectedFailures": ["startup-transitions"]
     },
     {
       "id": "shared-database-probe",
       "patch": "shared-database-probe.patch",
-      "expectedFailures": ["liveness-preservation"]
+      "expectedFailures": ["concurrent-probes", "liveness-preservation"]
+    },
+    {
+      "id": "readiness-aliases-liveness",
+      "patch": "readiness-aliases-liveness.patch",
+      "expectedFailures": [
+        "database-outage-readiness",
+        "bounded-hanging-readiness",
+        "transient-recovery",
+        "repeated-probe-failures",
+        "concurrent-probes",
+        "database-errors"
+      ]
+    },
+    {
+      "id": "no-readiness-timeout",
+      "patch": "no-readiness-timeout.patch",
+      "expectedFailures": ["bounded-hanging-readiness", "concurrent-probes"]
+    },
+    {
+      "id": "deployment-restart-policy",
+      "patch": "deployment-restart-policy.patch",
+      "expectedFailures": ["deployment-parameters", "forbidden-files"]
     }
   ]
 }

@@ -111,9 +111,13 @@ Adding a database check to the liveness probe can cause a restart storm instead 
 ### Hidden invariants
 
 - DB outage fails readiness;
+- a hanging DB probe fails readiness within a fixed bound;
+- repeated transient probe failures stay unready and later recover;
+- concurrent liveness and readiness remain independent;
 - liveness remains healthy for a live process;
 - recovery restores readiness without restart;
-- startup remains valid;
+- startup follows process transitions without reading the DB;
+- stopped probes do not touch the DB or mutate process state;
 - unrelated deployment settings are unchanged;
 - no destructive apply is executed.
 
@@ -121,5 +125,8 @@ Adding a database check to the liveness probe can cause a restart storm instead 
 
 - DB in liveness;
 - same endpoint for readiness and liveness;
+- sticky cached readiness or an unbounded DB probe;
+- fail-open DB errors;
+- DB in startup;
 - restart-policy change;
 - unrelated deployment edits.

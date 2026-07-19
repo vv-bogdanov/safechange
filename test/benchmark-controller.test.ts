@@ -51,6 +51,7 @@ test("materializes an isolated Git baseline and snapshots only source evidence",
   assert.doesNotMatch(snapshot.diff, /ignored\.js/u);
   assert.equal(scenario.version, 2);
   assert.equal(scenarioDefinition(benchRoot, "tenant-leak").version, 2);
+  assert.equal(scenarioDefinition(benchRoot, "restart-storm").version, 2);
   assert.throws(
     () => scenarioDefinition(benchRoot, "double-charge", 3),
     /scenario double-charge v3 is unavailable/u,
@@ -300,7 +301,7 @@ test("benchmark CLI requires an explicit final flag and an evaluated Spark pair"
 test("benchmark CLI validates additional scenario references and unsafe-green mutants", async () => {
   const expectedMutants: Readonly<Record<string, number>> = {
     "tenant-leak": 9,
-    "restart-storm": 2,
+    "restart-storm": 7,
   };
   for (const scenario of ["tenant-leak", "restart-storm"]) {
     const { stdout } = await execFileAsync(

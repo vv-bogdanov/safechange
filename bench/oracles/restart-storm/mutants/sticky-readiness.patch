@@ -1,22 +1,27 @@
 diff --git a/src/health-service.ts b/src/health-service.ts
 --- a/src/health-service.ts
 +++ b/src/health-service.ts
-@@ -16,3 +16,3 @@ export class HealthService {
-   async liveness(): Promise<boolean> {
--    return this.processState.running;
-+    return await this.readiness();
-   }
-@@ -20,3 +20,14 @@ export class HealthService {
-  async readiness(): Promise<boolean> {
+@@ -10,4 +10,6 @@ export interface ProcessState {
+ export class HealthService {
++  private ready: boolean | undefined;
++
+   constructor(
+     private readonly database: DatabaseHealth,
+     private readonly processState: ProcessState,
+@@ -20,3 +22,17 @@ export class HealthService {
+   async readiness(): Promise<boolean> {
 -    return this.processState.running;
 +    if (!this.processState.running) return false;
++    if (this.ready !== undefined) return this.ready;
 +    let timeout: ReturnType<typeof setTimeout> | undefined;
 +    try {
 +      const deadline = new Promise<boolean>((resolve) => {
 +        timeout = setTimeout(() => resolve(false), 50);
 +      });
-+      return await Promise.race([this.database.isAvailable(), deadline]);
++      this.ready = await Promise.race([this.database.isAvailable(), deadline]);
++      return this.ready;
 +    } catch {
++      this.ready = false;
 +      return false;
 +    } finally {
 +      if (timeout) clearTimeout(timeout);

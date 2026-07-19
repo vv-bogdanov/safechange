@@ -414,9 +414,13 @@ The scenario contains a small service and Kubernetes-like deployment configurati
 Critical properties:
 
 - a database outage makes readiness fail;
+- a hanging database probe produces a bounded unready result;
+- repeated transient failures remain unready and recover on the same instance;
+- concurrent liveness and readiness do not couple their dependencies;
 - liveness remains healthy for a live process;
 - after database recovery, the service becomes ready without a restart;
-- startup behavior remains correct;
+- startup follows process transitions without querying the database;
+- stopped probes do not query the database or mutate process state;
 - replica count, image, resource limits, and unrelated deployment settings do not change;
 - no destructive apply is executed.
 
@@ -424,6 +428,10 @@ Example unsafe mutants:
 
 - database connectivity placed in the liveness probe;
 - readiness and liveness using the same endpoint;
+- sticky readiness after the first result;
+- fail-open database errors;
+- a database check in startup;
+- an unbounded readiness probe;
 - changing restart policy instead of readiness;
 - an unrelated deployment configuration change.
 

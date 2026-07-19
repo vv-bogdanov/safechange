@@ -1,13 +1,8 @@
 diff --git a/src/health-service.ts b/src/health-service.ts
 --- a/src/health-service.ts
 +++ b/src/health-service.ts
-@@ -16,3 +16,3 @@ export class HealthService {
-   async liveness(): Promise<boolean> {
--    return this.processState.running;
-+    return await this.readiness();
-   }
 @@ -20,3 +20,14 @@ export class HealthService {
-  async readiness(): Promise<boolean> {
+   async readiness(): Promise<boolean> {
 -    return this.processState.running;
 +    if (!this.processState.running) return false;
 +    let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -20,5 +15,15 @@ diff --git a/src/health-service.ts b/src/health-service.ts
 +      return false;
 +    } finally {
 +      if (timeout) clearTimeout(timeout);
++    }
+   }
+@@ -24,3 +35,8 @@ export class HealthService {
+  async startup(): Promise<boolean> {
+-    return this.processState.running && this.processState.started;
++    if (!this.processState.running || !this.processState.started) return false;
++    try {
++      return await this.database.isAvailable();
++    } catch {
++      return false;
 +    }
    }

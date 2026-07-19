@@ -28,7 +28,7 @@ export interface AttemptSnapshot {
 
 const scenarioVersions: Readonly<Record<string, number>> = {
   "double-charge": 2,
-  "restart-storm": 1,
+  "restart-storm": 2,
   "tenant-leak": 2,
 };
 

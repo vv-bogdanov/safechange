@@ -166,3 +166,37 @@ notification, audit, event, callback, alias-mutation, and module-global effects.
 - late return or wrong preview flag;
 - preview fallback that still increments commit metrics;
 - callback without return.
+
+---
+
+## 5. Partial Replay
+
+### Task
+
+```text
+Make partial batch replays resume safely.
+Keep the public API unchanged.
+Do not add a production dependency.
+```
+
+### Risk
+
+A retry after one successful side effect can return the right result while duplicating inventory,
+ledger, notification, or callback effects.
+
+### Hidden invariants
+
+- failure after every effect boundary is safely replayable;
+- concurrent retries and a new processor instance do not repeat effects;
+- conflicting input is rejected before another effect;
+- smuggled resume keys cannot merge unrelated jobs;
+- callbacks run exactly once and independent stores remain independent;
+- input objects, module defaults, public API, and project controls remain stable.
+
+### Unsafe candidates
+
+- progress saved only after all item effects;
+- process-local or module-global completion caches;
+- idempotency applied only to inventory;
+- swallowed failure reported as completion;
+- token-only reuse without input validation.

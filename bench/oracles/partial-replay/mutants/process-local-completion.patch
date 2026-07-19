@@ -1,0 +1,24 @@
+diff --git a/batch.py b/batch.py
+--- a/batch.py
++++ b/batch.py
+@@ -41,5 +41,6 @@ class BatchProcessor:
+     def __init__(self, state):
+         self.state = state
++        self._completed = set()
+ 
+     def process(self, job, context=None):
+         active_context = DEFAULT_CONTEXT if context is None else context
+@@ -48,5 +49,7 @@ class BatchProcessor:
+         signature = tuple((item["id"], item["quantity"]) for item in job["items"])
+         self.state._begin(job_id, signature)
+         try:
++            if job_id in self._completed:
++                return {"status": "complete", "job_id": job_id, "items": len(job["items"])}
+             for item in job["items"]:
+                 payload = {
+@@ -60,4 +63,5 @@ class BatchProcessor:
+                 self.state._effect("notifications", key, payload)
+         except Exception as error:
+             return {"status": "retry", "job_id": job_id, "error": str(error)}
++        self._completed.add(job_id)
+         return {"status": "complete", "job_id": job_id, "items": len(job["items"])}

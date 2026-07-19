@@ -24,12 +24,13 @@ The MVP compares two modes:
 - **Codex Direct**
 - **ChangeSafely**
 
-across four open scenarios:
+across five open scenarios:
 
 - Double Charge;
 - Tenant Leak;
 - Restart Storm;
-- Legacy Spaghetti (CommonJS).
+- Legacy Spaghetti (CommonJS);
+- Partial Replay (Python).
 
 This is an open pilot evaluation, not a universal industry benchmark.
 
@@ -86,9 +87,9 @@ npm run benchmark -- run --scenario <scenario> --mode changesafely --model <id> 
 Do not run these commands without separate user authorization. The measurement type
 is persisted in every newly created comparison and run document.
 
-Tenant Leak, Restart Storm, and the CommonJS Legacy Spaghetti proof use the same commands
+Tenant Leak, Restart Storm, CommonJS Legacy Spaghetti, and Python Partial Replay use the same commands
 with `--scenario tenant-leak`, `--scenario restart-storm`, or
-`--scenario legacy-spaghetti` after their deterministic validators pass.
+`--scenario legacy-spaghetti` or `--scenario partial-replay` after their deterministic validators pass.
 
 Evaluate candidate-added tests against the reference and declared mutants, then replay
 only the persisted hash-verified evidence and generate the paired report:

@@ -87,13 +87,13 @@ The suite is not intended to claim that ChangeSafely:
 - completely discovers blast radius;
 - replaces code review, staging, or production monitoring.
 
-It measures only the stated properties on four published scenarios.
+It measures only the stated properties on five published scenarios.
 
 ## 6. MVP scope
 
 The MVP includes:
 
-- three small TypeScript scenarios and one CommonJS legacy scenario;
+- three small TypeScript scenarios, one CommonJS legacy scenario, and one Python scenario;
 - two execution modes;
 - one deterministic evaluator;
 - hidden invariants inaccessible to the agent during execution;
@@ -465,6 +465,26 @@ Example unsafe mutants:
 - counting the legacy preview fallback as a committed repricing effect;
 - invoking the callback without returning from the legacy flow.
 
+### 10.5 Partial Replay - durable Python side effects
+
+User task:
+
+> Make partial batch replays resume safely. Keep the public API unchanged and add no production
+> dependency.
+
+The Python fixture combines inventory, ledger, notification, and callback effects with mutable
+module state, dict-based parameter smuggling, import registration, mutable defaults, and broad
+exception handling.
+
+Critical properties:
+
+- retry after failure at each effect boundary completes every effect exactly once;
+- concurrent retries and new processor instances share durable progress;
+- the same job id rejects conflicting item input without another effect;
+- a smuggled resume key cannot merge unrelated jobs;
+- callbacks occur exactly once and independent state stores do not share completion;
+- caller input, module defaults, public API, and project controls remain unchanged.
+
 ## 11. Structure of each scenario
 
 Each scenario package must logically contain:
@@ -655,7 +675,7 @@ The video should focus primarily on one live Double Charge run. Briefly show the
 
 The benchmark MVP is complete when:
 
-1. All four scenarios run locally and reproducibly.
+1. All five scenarios run locally and reproducibly.
 2. Each scenario has a validated reference patch.
 3. Each scenario has at least six meaningful unsafe mutants.
 4. Each scenario has at least one unsafe-green mutant.

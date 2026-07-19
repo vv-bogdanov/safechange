@@ -1,0 +1,35 @@
+diff --git a/batch.py b/batch.py
+--- a/batch.py
++++ b/batch.py
+@@ -13,15 +13,20 @@ class SharedState:
+         self.fail_after = fail_after
+         self._failed = False
+         self._lock = threading.RLock()
++        self._effects = set()
+ 
+     def _begin(self, _job_id, _signature):
+         return None
+ 
+-    def _effect(self, kind, _key, payload):
++    def _effect(self, kind, key, payload):
+         with self._lock:
++            effect_key = (kind, key)
++            if effect_key in self._effects:
++                return
+             target = getattr(self, kind)
+             target.append(dict(payload))
+             handler = IMPORT_HANDLERS.get(kind)
+             if handler is not None:
+                 handler(dict(payload))
++            self._effects.add(effect_key)
+             if self.fail_after == kind and not self._failed:
+@@ -42,8 +47,6 @@ class BatchProcessor:
+         self.state = state
+ 
+     def process(self, job, context=None):
+-        active_context = DEFAULT_CONTEXT if context is None else context
+-        active_context["attempts"] = active_context.get("attempts", 0) + 1
+-        job_id = job.get("resume_key") or job["job_id"]
++        job_id = job["job_id"]
+         signature = tuple((item["id"], item["quantity"]) for item in job["items"])
+         self.state._begin(job_id, signature)

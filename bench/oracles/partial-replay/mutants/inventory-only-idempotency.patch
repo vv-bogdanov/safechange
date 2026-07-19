@@ -1,0 +1,22 @@
+diff --git a/batch.py b/batch.py
+--- a/batch.py
++++ b/batch.py
+@@ -13,12 +13,17 @@ class SharedState:
+         self.fail_after = fail_after
+         self._failed = False
+         self._lock = threading.RLock()
++        self._inventory_keys = set()
+ 
+     def _begin(self, _job_id, _signature):
+         return None
+ 
+-    def _effect(self, kind, _key, payload):
++    def _effect(self, kind, key, payload):
+         with self._lock:
++            if kind == "inventory" and key in self._inventory_keys:
++                return
+             target = getattr(self, kind)
+             target.append(dict(payload))
++            if kind == "inventory":
++                self._inventory_keys.add(key)
+             handler = IMPORT_HANDLERS.get(kind)

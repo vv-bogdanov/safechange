@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "partial-replay",
+  "version": 1,
+  "visibleChecks": [{ "argv": ["python", "-m", "pytest"], "cwd": "." }],
+  "preparation": [],
+  "testPaths": { "prefixes": ["tests"], "patterns": ["test_*.py", "*_test.py"] },
+  "toolchains": [
+    { "id": "python", "version": { "argv": ["python", "--version"], "cwd": "." } },
+    {
+      "id": "pytest",
+      "version": { "argv": ["python", "-m", "pytest", "--version"], "cwd": "." }
+    }
+  ]
+}

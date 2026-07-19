@@ -1,0 +1,22 @@
+diff --git a/batch.py b/batch.py
+--- a/batch.py
++++ b/batch.py
+@@ -13,6 +13,7 @@ class SharedState:
+         self.fail_after = fail_after
+         self._failed = False
+         self._lock = threading.RLock()
++        self._completed_items = set()
+ 
+     def _begin(self, _job_id, _signature):
+         return None
+@@ -55,7 +56,10 @@ class BatchProcessor:
+                     "quantity": item["quantity"],
+                 }
+                 key = f"{job_id}:{item['id']}"
++                if key in self.state._completed_items:
++                    continue
+                 self.state._effect("inventory", key, payload)
+                 self.state._effect("ledger", key, payload)
+                 self.state._effect("notifications", key, payload)
++                self.state._completed_items.add(key)
+         except Exception as error:

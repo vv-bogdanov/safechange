@@ -74,6 +74,10 @@ export async function runNodeScopeChecks({ checks, root, oracleRoot, baselineRoo
     );
   });
 
+  await runChangedFileScopeCheck({ checks, root, allowed: /^(?:src|test)\//u });
+}
+
+export async function runChangedFileScopeCheck({ checks, root, allowed }) {
   await check(checks, "forbidden-files", "scope", async () => {
     const rootCommit = run("git", ["rev-list", "--max-parents=0", "HEAD"], root);
     assert(rootCommit.status === 0, commandFailure(rootCommit));
@@ -92,7 +96,7 @@ export async function runNodeScopeChecks({ checks, root, oracleRoot, baselineRoo
         .filter(Boolean)
         .map((entry) => entry.slice(3)),
     ]);
-    const forbidden = [...files].filter((file) => !/^(src|test)\//u.test(file));
+    const forbidden = [...files].filter((file) => !allowed.test(file));
     assert(forbidden.length === 0, `forbidden changed files: ${forbidden.join(", ")}`);
   });
 }

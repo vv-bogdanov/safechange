@@ -1,0 +1,34 @@
+{
+  "mutants": [
+    {
+      "id": "late-item-progress",
+      "patch": "late-item-progress.patch",
+      "expectedFailures": ["partial-boundary-replay"]
+    },
+    {
+      "id": "process-local-completion",
+      "patch": "process-local-completion.patch",
+      "expectedFailures": ["partial-boundary-replay", "cross-instance-replay"]
+    },
+    {
+      "id": "inventory-only-idempotency",
+      "patch": "inventory-only-idempotency.patch",
+      "expectedFailures": ["partial-boundary-replay", "callback-exactly-once"]
+    },
+    {
+      "id": "swallowed-completion",
+      "patch": "swallowed-completion.patch",
+      "expectedFailures": ["partial-boundary-replay"]
+    },
+    {
+      "id": "token-only-reuse",
+      "patch": "token-only-reuse.patch",
+      "expectedFailures": ["input-conflict"]
+    },
+    {
+      "id": "global-completion-cache",
+      "patch": "global-completion-cache.patch",
+      "expectedFailures": ["partial-boundary-replay", "state-isolation"]
+    }
+  ]
+}

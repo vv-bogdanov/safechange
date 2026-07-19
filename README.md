@@ -205,7 +205,7 @@ Sanitized live rehearsal evidence is kept in
 [`docs/RELEASE_REHEARSAL.md`](docs/RELEASE_REHEARSAL.md); an example result is in
 [`docs/sample-report.md`](docs/sample-report.md).
 
-The model-free [Risk Suite](bench/README.md) validates four high-blast-radius change
+The model-free [Risk Suite](bench/README.md) validates five high-blast-radius change
 scenarios. Its current [Spark development pilot](bench/RESULTS.md) is diagnostic
 evidence, not a final or statistically significant benchmark.
 

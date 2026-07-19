@@ -3,3 +3,4 @@ dist/
 .safechange/
 .idea/
 *.tgz
+/STEP.md

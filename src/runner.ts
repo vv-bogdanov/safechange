@@ -1,7 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { access, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, relative, sep } from "node:path";
 import spawn from "cross-spawn";
@@ -46,7 +46,7 @@ export interface RunCommandOptions {
 }
 
 const forbiddenTokens = new Set(["|", "||", "&&", ";", ">", ">>", "<"]);
-const CAPTURE_SCRIPT = `const { closeSync, fstatSync, openSync, writeFileSync, writeSync } = require("node:fs");
+const CAPTURE_SCRIPT = `const { closeSync, fstatSync, openSync, writeSync } = require("node:fs");
 const { spawn } = require("node:child_process");
 const [capturePath, maxText, program, ...args] = process.argv.slice(1);
 const maxBytes = Number(maxText);
@@ -71,7 +71,6 @@ child.on("close", (exitCode, signal) => {
   clearInterval(limitTimer);
   closeSync(stdoutFd); closeSync(stderrFd);
   const result = overflow ? { exitCode: 1, signal: null } : { exitCode, signal };
-  writeFileSync(capturePath, JSON.stringify(result), { flag: "wx", mode: 0o600 });
   if (result.signal) process.kill(process.pid, result.signal); else process.exit(result.exitCode ?? 1);
 });`;
 
@@ -300,7 +299,7 @@ export async function runCommand(
     const completedAt = new Date();
     const captured =
       capturePath && !timedOut && childResult.exitCode !== null
-        ? await loadCapturedOutput(capturePath, childResult, maxOutputBytes)
+        ? await loadCapturedOutput(capturePath, maxOutputBytes)
         : undefined;
     const stdoutSnapshot = captured?.stdout ?? stdout.snapshot();
     const stderrSnapshot = captured?.stderr ?? stderr.snapshot();
@@ -427,49 +426,20 @@ async function resolveExecutable(name: string, pathValue = ""): Promise<string> 
   throw new Error(`Cannot resolve approved executable: ${name}`);
 }
 
-interface CapturedMetadata {
-  exitCode: number | null;
-  signal: NodeJS.Signals | null;
-}
-
-interface CapturedOutput extends CapturedMetadata {
+interface CapturedOutput {
   stdout: ReturnType<OutputCapture["snapshot"]>;
   stderr: ReturnType<OutputCapture["snapshot"]>;
 }
 
 async function loadCapturedOutput(
   capturePath: string,
-  processResult: CapturedMetadata,
   maxOutputBytes: number,
 ): Promise<CapturedOutput> {
-  let value: unknown;
-  try {
-    value = JSON.parse(await readFile(capturePath, "utf8"));
-  } catch {
-    throw new Error("Sandbox output capture is not valid JSON");
-  }
-  if (!isCapturedMetadata(value)) {
-    throw new Error("Sandbox output capture is invalid");
-  }
-  if (value.exitCode !== processResult.exitCode || value.signal !== processResult.signal) {
-    throw new Error("Sandbox output capture process result mismatch");
-  }
   const [stdout, stderr] = await Promise.all([
     captureFile(`${capturePath}.stdout`, maxOutputBytes),
     captureFile(`${capturePath}.stderr`, maxOutputBytes),
   ]);
-  return { ...value, stdout, stderr };
-}
-
-function isCapturedMetadata(value: unknown): value is CapturedMetadata {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  return (
-    Object.keys(record).length === 2 &&
-    (record.exitCode === null || Number.isInteger(record.exitCode)) &&
-    (record.signal === null ||
-      (typeof record.signal === "string" && /^SIG[A-Z0-9]+$/u.test(record.signal)))
-  );
+  return { stdout, stderr };
 }
 
 async function captureFile(path: string, maxOutputBytes: number) {

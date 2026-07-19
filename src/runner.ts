@@ -217,10 +217,9 @@ export async function runCommand(
   const permissionProfile = options.permissionProfile ?? ":workspace";
   const sourceEnvironment = options.env ?? process.env;
   const commandId = randomUUID();
-  const capturePath =
-    sandboxed && options.permissionProfile
-      ? join(cwd, ".changesafely", "command-results", `${commandId}.json`)
-      : undefined;
+  const capturePath = sandboxed
+    ? join(cwd, ".changesafely", "command-results", `${commandId}.json`)
+    : undefined;
   if (capturePath) await mkdir(dirname(capturePath), { recursive: true, mode: 0o700 });
   const capturedCommand = capturePath
     ? await resolveCapturedCommand(argv, sourceEnvironment)

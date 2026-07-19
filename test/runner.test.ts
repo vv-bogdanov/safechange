@@ -162,6 +162,48 @@ child.on("exit", (code, signal) => signal ? process.kill(process.pid, signal) : 
   assert.match(failed.stdout, /named-profile-output/u);
 });
 
+test("runner captures output from the default sandbox profile", async (t) => {
+  const cwd = await mkdtemp(join(tmpdir(), "changesafely-default-command-profile-"));
+  t.after(async () => rm(cwd, { recursive: true, force: true }));
+  const fakeBin = join(cwd, "bin");
+  await mkdir(fakeBin);
+  const fakeCodex = join(fakeBin, "codex");
+  const fakeRunner = join(fakeBin, "codex.mjs");
+  await writeFile(
+    fakeRunner,
+    `import { spawn } from "node:child_process";
+const args = process.argv.slice(2);
+if (args[0] !== "sandbox" || args[args.indexOf("-P") + 1] !== ":workspace") process.exit(91);
+if (!args.includes("--sandbox-state-disable-network")) process.exit(92);
+const separator = args.indexOf("--");
+const capturePath = args[separator + 4]?.replaceAll("\\\\", "/");
+if (!capturePath?.includes("/.changesafely/command-results/")) process.exit(93);
+const child = spawn(args[separator + 1], args.slice(separator + 2), {
+  stdio: "ignore",
+  env: process.env,
+});
+child.on("exit", (code, signal) => signal ? process.kill(process.pid, signal) : process.exit(code ?? 1));
+`,
+  );
+  await writeFile(
+    fakeCodex,
+    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(fakeRunner)} "$@"\n`,
+  );
+  await chmod(fakeCodex, 0o755);
+  const testFile = join(cwd, "default-profile.test.js");
+  await writeFile(
+    testFile,
+    'import assert from "node:assert/strict"; import test from "node:test"; test("output", () => assert.fail("default-profile-output"));\n',
+  );
+
+  const result = await runCommand(["node", "--test", testFile], cwd, {
+    sandboxed: true,
+    env: { ...process.env, PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ""}` },
+  });
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stdout, /default-profile-output/u);
+});
+
 test("runner keeps only a bounded output tail and emits private evidence", async (t) => {
   const cwd = await mkdtemp(join(tmpdir(), "changesafely-output-"));
   t.after(async () => rm(cwd, { recursive: true, force: true }));

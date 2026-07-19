@@ -1,0 +1,3 @@
+Make payment retries idempotent.
+Keep the public API unchanged.
+Do not add a production dependency.

@@ -1,0 +1,14 @@
+{
+  "mutants": [
+    {
+      "id": "process-local-cache",
+      "patch": "process-local-cache.patch",
+      "expectedFailures": ["concurrent-retry", "retry-after-restart"]
+    },
+    {
+      "id": "check-then-write",
+      "patch": "check-then-write.patch",
+      "expectedFailures": ["concurrent-retry", "recovery-after-failed-save"]
+    }
+  ]
+}

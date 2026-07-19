@@ -1,0 +1,35 @@
+diff --git a/src/payment-service.ts b/src/payment-service.ts
+--- a/src/payment-service.ts
++++ b/src/payment-service.ts
+@@ -50,6 +50,8 @@ export class PaymentConflictError extends Error {
+ }
+
+ export class PaymentService {
++  private readonly retryCache = new Map<string, StoredOperation>();
++
+   constructor(
+     private readonly gateway: PaymentGateway,
+     private readonly store: OperationStore,
+@@ -63,11 +65,21 @@ export class PaymentService {
+   async retryPayment(input: RetryPaymentRequest): Promise<PaymentReceipt> {
+     assertAmount(input.amount);
+     assertOperationToken(input.operationToken);
+
++    const previous = this.retryCache.get(input.operationToken);
++    if (previous) {
++      if (previous.amount !== input.amount || previous.currency !== input.currency) {
++        throw new PaymentConflictError(input.operationToken);
++      }
++      return previous.receipt;
++    }
++
+     const receipt = await this.gateway.charge({
+       amount: input.amount,
+       currency: input.currency,
+     });
+-    await this.store.save({ ...input, receipt });
++    const operation = { ...input, receipt };
++    await this.store.save(operation);
++    this.retryCache.set(input.operationToken, operation);
+     return receipt;
+   }

@@ -21,6 +21,7 @@ import {
   cliEnvironment,
   createFakeCodex,
   createFunctionalRepository,
+  createPythonFunctionalRepository,
   installPackedCli,
   type ProcessResult,
   protocolVersion,
@@ -165,6 +166,51 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
     const trace = await readTrace(outcome.tracePath);
     assert.equal(state.permissionProfile, "benchmark-profile");
     assert(trace.some((event) => event.sandboxPolicy === "permissions:benchmark-profile"));
+  });
+
+  await t.test("packed CLI completes a prepared pytest repository", async () => {
+    const repoPath = join(temporaryRoot, "python-workflow");
+    await createPythonFunctionalRepository(
+      repoPath,
+      join(root, "test", "fixtures", "python-project"),
+    );
+    const result = await spawnCaptured(
+      changesafely,
+      [
+        "run",
+        "--task",
+        "Return the requested value.",
+        "--plans",
+        "1",
+        "--repo",
+        repoPath,
+        "--json",
+      ],
+      temporaryRoot,
+      await environment("python"),
+    ).result;
+    assert.equal(result.exitCode, 0, `${result.stderr}\n${result.stdout}`);
+    const outcome = parseOutcome(result);
+    assert.equal(outcome.status, "VERIFIED");
+    const state = await readState(outcome.statePath);
+    assert.deepEqual(
+      state.repositoryCapabilities?.checks.map((check) => ({
+        kind: check.kind,
+        argv: check.argv,
+        cwd: check.cwd,
+      })),
+      [{ kind: "test", argv: ["python", "-m", "pytest"], cwd: "." }],
+    );
+    assert.equal(
+      await runSuccessful(
+        "git",
+        ["diff", "--name-only", state.baselineCommit, state.testCommit],
+        repoPath,
+      ),
+      "tests/test_value.py",
+    );
+    const commands = await loadVerifiedArtifact(repoPath, state, "verificationCommands");
+    assert.ok(commands.payload.every((command) => command.argv[0] === "python"));
   });
 
   await t.test("full run reports human progress on stderr", async () => {

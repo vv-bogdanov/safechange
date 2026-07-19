@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import spawn from "cross-spawn";
 
@@ -127,6 +127,18 @@ export async function createFunctionalRepository(path: string): Promise<void> {
     "utf8",
   );
   await writeFile(join(path, "src", "value.ts"), "export const value = 1;\n", "utf8");
+  await runSuccessful("git", ["init", "-b", "main"], path);
+  await runSuccessful("git", ["config", "user.name", "ChangeSafely Package Test"], path);
+  await runSuccessful("git", ["config", "user.email", "package-test@changesafely.local"], path);
+  await runSuccessful("git", ["add", "."], path);
+  await runSuccessful("git", ["commit", "-m", "fixture baseline"], path);
+}
+
+export async function createPythonFunctionalRepository(
+  path: string,
+  fixtureRoot: string,
+): Promise<void> {
+  await cp(fixtureRoot, path, { recursive: true });
   await runSuccessful("git", ["init", "-b", "main"], path);
   await runSuccessful("git", ["config", "user.name", "ChangeSafely Package Test"], path);
   await runSuccessful("git", ["config", "user.email", "package-test@changesafely.local"], path);

@@ -5,9 +5,9 @@
 ChangeSafely is a local developer tool whose workflow is independent of target source
 syntax. It compares plans, creates a protected safety harness, implements one selected
 plan, and verifies the resulting Git branch. The current security-qualified target is
-a prepared npm-based TypeScript repository; other toolchains are not claimed until
-their capability detection, command policy, and end-to-end fixture pass. ChangeSafely
-is not a deployment or rollback system.
+prepared npm JavaScript/TypeScript and Python/pytest repositories; other toolchains are
+not claimed until their capability detection, command policy, and end-to-end fixture
+pass. ChangeSafely is not a deployment or rollback system.
 
 ## Assets
 
@@ -58,8 +58,8 @@ operating-system sandbox.
 
 ## Required controls for ecosystem expansion
 
-These controls are release gates for non-npm and polyglot targets, not claims about the
-current npm-only implementation:
+These controls are enforced for npm and pytest and remain release gates for additional
+and polyglot targets:
 
 - Discover a repository capability catalog during read-only preflight and hash it
   before writes. Plans and harnesses may use only exact catalog argv/cwd pairs.
@@ -92,9 +92,8 @@ current npm-only implementation:
   telemetry performs a separate outbound HTTPS request after a CLI failure. Its
   event has no user fields, but the receiving host can observe the source IP.
   Trace and diagnostic files and their contents are never attached to Sentry events.
-- The current release supports a bounded npm/TypeScript command contract. Other
-  ecosystems and production workflows have not yet been security-qualified, even
-  though the target architecture is language-independent.
+- The current release supports bounded npm and pytest command contracts. Other
+  ecosystems and production workflows have not yet been security-qualified.
 - Non-Node runtimes may execute user startup files, plugins, autoloaders, compiler
   hooks, or package scripts before tests. Network denial and credential removal reduce
   impact but cannot make hostile repository code trustworthy.

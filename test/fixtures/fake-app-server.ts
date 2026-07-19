@@ -116,18 +116,32 @@ function completeTurn({ threadId, turnId, text }: PendingCompletion): void {
 }
 
 async function structuredOutput(prompt: string): Promise<unknown> {
+  const python = mode === "python";
   if (prompt.includes("[CHANGESAFELY_ROLE:discovery]")) {
     if (mode === "malformed") return { summary: "missing required fields" };
     return validEvidence({
-      summary: "Small TypeScript fixture with one source file.",
+      summary: python
+        ? "Small Python fixture with one source file."
+        : "Small TypeScript fixture with one source file.",
       facts: [
         {
           id: "F1",
           claim: "The source is under src.",
-          references: [{ path: "src/value.ts", detail: "exports the current value" }],
+          references: [
+            {
+              path: python ? "src/value.py" : "src/value.ts",
+              detail: "exports the current value",
+            },
+          ],
         },
       ],
-      commands: [{ name: "test", argv: ["npm", "test"], purpose: "Run tests" }],
+      commands: [
+        {
+          name: "test",
+          argv: python ? ["python", "-m", "pytest"] : ["npm", "test"],
+          purpose: "Run tests",
+        },
+      ],
       testGaps: ["Requested behavior has no acceptance test."],
       constraints: ["Keep the public function stable."],
       assumptions: [],
@@ -142,6 +156,7 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       approvalRequiredChanges: ["New production dependencies"],
       evidenceGaps: ["Acceptance test is missing."],
       risks: ["Behavioral regression."],
+      allowedPathPrefixes: python ? ["src", "tests"] : ["src", "test"],
     });
   }
   if (prompt.includes("[CHANGESAFELY_ROLE:planner]")) {
@@ -157,12 +172,29 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       title: `${lens} fixture plan`,
       approach: `Use the ${lens} approach in the existing module.`,
       rationale: "It is bounded and directly testable.",
+      ...(python
+        ? {
+            files: [
+              { path: "tests/test_value.py", purpose: "Acceptance coverage" },
+              { path: "src/value.py", purpose: "Implementation" },
+            ],
+            steps: [
+              {
+                id: "S1",
+                description: "Add the failing acceptance test.",
+                paths: ["tests/test_value.py"],
+              },
+              { id: "S2", description: "Implement the behavior.", paths: ["src/value.py"] },
+            ],
+          }
+        : {}),
       safetyTests: [
         {
           name: "acceptance",
           proves: "AC1 and INV1",
-          argv:
-            mode === "planner-correction" && !prompt.includes("[CHANGESAFELY_CORRECTION]")
+          argv: python
+            ? ["python", "-m", "pytest"]
+            : mode === "planner-correction" && !prompt.includes("[CHANGESAFELY_CORRECTION]")
               ? ["npm", "run", "typecheck"]
               : ["npm", "test"],
         },
@@ -176,7 +208,13 @@ async function structuredOutput(prompt: string): Promise<unknown> {
                 purpose: "Verify the selected plan contract",
               },
             ]
-          : [{ name: "test", argv: ["npm", "test"], purpose: "Verify behavior" }],
+          : [
+              {
+                name: "test",
+                argv: python ? ["python", "-m", "pytest"] : ["npm", "test"],
+                purpose: "Verify behavior",
+              },
+            ],
     });
   }
   if (prompt.includes("[CHANGESAFELY_ROLE:judge]")) {
@@ -205,6 +243,27 @@ async function structuredOutput(prompt: string): Promise<unknown> {
     };
   }
   if (prompt.includes("[CHANGESAFELY_ROLE:test-author]")) {
+    if (python) {
+      await mkdir("tests", { recursive: true });
+      await writeFile(
+        "tests/test_value.py",
+        "from src.value import value\n\n\ndef test_requested_value():\n    assert value() == 2\n",
+        "utf8",
+      );
+      return {
+        summary: "Added a failing pytest acceptance test.",
+        testPaths: ["tests/test_value.py"],
+        fixturePaths: [],
+        targetedCommand: {
+          name: "targeted acceptance",
+          argv: ["python", "-m", "pytest"],
+          purpose: "Prove the requested behavior is missing on baseline",
+        },
+        expectedBaselineOutcome: "fail",
+        expectedFailure: "Expected the requested value",
+        protectedPaths: ["tests/test_value.py"],
+      };
+    }
     await mkdir("test", { recursive: true });
     await writeFile(
       "test/value.test.ts",
@@ -226,6 +285,16 @@ async function structuredOutput(prompt: string): Promise<unknown> {
     };
   }
   if (prompt.includes("[CHANGESAFELY_ROLE:implementer]")) {
+    if (python) {
+      await writeFile("src/value.py", "def value():\n    return 2\n", "utf8");
+      return {
+        summary: "Changed the existing Python value implementation.",
+        changedPaths: ["src/value.py"],
+        testsAdded: [],
+        scopeNotes: ["Protected pytest coverage was not changed."],
+        residualRisks: [],
+      };
+    }
     if (mode === "delay-implementer") {
       await mkdir(".changesafely", { recursive: true });
       await writeFile(".changesafely/test-implementer-started", "ready\n", "utf8");

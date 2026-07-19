@@ -92,7 +92,7 @@ See [`THREAT_MODEL.md`](THREAT_MODEL.md) for the limits of this boundary.
 The core does not parse or transform target source code. Ecosystem-specific knowledge
 is limited to a baseline repository capability catalog: approved checks, working
 directories, test paths, control files, and their source. The current implementation
-has a bounded npm catalog. Subsequent toolchains must reuse the same process runner and
+has bounded npm and pytest detection. Subsequent toolchains must reuse the same process runner and
 Git/artifact flow rather than introduce per-language orchestration. Explicit repository
 capabilities remain data, not a runtime plugin system.
 

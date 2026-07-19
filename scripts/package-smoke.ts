@@ -20,8 +20,17 @@ const root = process.cwd();
 const temporaryRoot = await mkdtemp(join(tmpdir(), "changesafely-package-smoke-"));
 
 try {
-  const { changesafely, setupDemo } = await installPackedCli(root, temporaryRoot);
+  const { changesafely, installRoot, setupDemo } = await installPackedCli(root, temporaryRoot);
   await Promise.all([access(changesafely), access(setupDemo)]);
+
+  const npxHelp = await runSuccessful(
+    process.platform === "win32" ? "npx.cmd" : "npx",
+    ["--no-install", "changesafely", "--help"],
+    installRoot,
+  );
+  if (!npxHelp.includes("ChangeSafely") || !npxHelp.includes("changesafely run")) {
+    throw new Error(`Packed npx entrypoint returned unexpected help: ${npxHelp}`);
+  }
 
   const version = await runSuccessful(changesafely, ["--version"], temporaryRoot);
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {

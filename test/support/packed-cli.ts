@@ -77,7 +77,7 @@ export async function runSuccessful(
 export async function installPackedCli(
   projectRoot: string,
   temporaryRoot: string,
-): Promise<{ changesafely: string; setupDemo: string }> {
+): Promise<{ changesafely: string; installRoot: string; setupDemo: string }> {
   const packOutput = await runSuccessful(
     executable("npm"),
     ["pack", "--json", "--ignore-scripts", "--pack-destination", temporaryRoot],
@@ -103,6 +103,7 @@ export async function installPackedCli(
   const binRoot = join(installRoot, "node_modules", ".bin");
   return {
     changesafely: join(binRoot, executable("changesafely")),
+    installRoot,
     setupDemo: join(binRoot, executable("changesafely-demo")),
   };
 }

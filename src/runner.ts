@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { constants, createReadStream } from "node:fs";
 import { access, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, relative, sep } from "node:path";
@@ -46,6 +46,20 @@ export interface RunCommandOptions {
 }
 
 const forbiddenTokens = new Set(["|", "||", "&&", ";", ">", ">>", "<"]);
+const forbiddenExecutables = new Set([
+  "bash",
+  "cmd",
+  "env",
+  "fish",
+  "pkexec",
+  "powershell",
+  "pwsh",
+  "sh",
+  "sudo",
+  "zsh",
+]);
+const forbiddenActions =
+  /^(?:add|deploy|destroy|exec|install|migrate|publish|remove|uninstall|update)$/iu;
 const CAPTURE_SCRIPT = `const { closeSync, fstatSync, openSync, writeSync } = require("node:fs");
 const { spawn } = require("node:child_process");
 const [capturePath, maxText, program, ...args] = process.argv.slice(1);
@@ -107,8 +121,18 @@ export function isSafetyTestCommand(argv: string[]): boolean {
 export function validateCommandArgv(argv: string[]): void {
   const [program, ...args] = argv;
   if (!program) throw new Error("Command argv must not be empty");
-  if (argv.some((part) => forbiddenTokens.has(part))) {
+  if (argv.some((part) => forbiddenTokens.has(part) || /[\r\n\0]/u.test(part))) {
     throw new Error(`Shell operators are forbidden in command argv: ${argv.join(" ")}`);
+  }
+  if (
+    program.includes("/") ||
+    program.includes("\\") ||
+    forbiddenExecutables.has(program.toLowerCase())
+  ) {
+    throw new Error(`Executable is not approved for deterministic checks: ${program}`);
+  }
+  if (args.some((arg) => ["-c", "-e", "--eval"].includes(arg))) {
+    throw new Error(`Inline evaluation is forbidden in command argv: ${argv.join(" ")}`);
   }
   if (program === "npm") {
     const allowed =
@@ -120,7 +144,9 @@ export function validateCommandArgv(argv: string[]): void {
     return;
   }
   if (program === "node" && args[0] === "--test") return;
-  throw new Error(`Executable is not approved for MVP verification: ${program}`);
+  if (args.slice(0, 2).some((arg) => forbiddenActions.test(arg))) {
+    throw new Error(`Lifecycle action is not approved: ${argv.join(" ")}`);
+  }
 }
 
 function commandName(argv: string[]): string {
@@ -390,6 +416,12 @@ async function resolveCapturedCommand(
   environment: NodeJS.ProcessEnv,
 ): Promise<string[]> {
   if (argv[0] === "node") return [process.execPath, ...argv.slice(1)];
+  if (argv[0] !== "npm") {
+    return [
+      await realpath(await resolveExecutable(argv[0] ?? "", environment.PATH)),
+      ...argv.slice(1),
+    ];
+  }
   const runtimeNpm = join(
     dirname(process.execPath),
     process.platform === "win32" ? "npm.cmd" : "npm",
@@ -417,7 +449,7 @@ async function resolveExecutable(name: string, pathValue = ""): Promise<string> 
     if (!directory) continue;
     const candidate = join(directory, process.platform === "win32" ? `${name}.cmd` : name);
     try {
-      await access(candidate);
+      await access(candidate, constants.X_OK);
       return candidate;
     } catch {
       // Continue to the next PATH entry.

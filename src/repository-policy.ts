@@ -53,11 +53,13 @@ export function isTestPath(path: string): boolean {
   );
 }
 
-export function isApprovalSensitivePath(path: string): boolean {
+export function isApprovalSensitivePath(path: string, controlFiles?: readonly string[]): boolean {
   const normalized = safeRepositoryPath(path);
   if (!normalized) return true;
   return (
-    REPOSITORY_CONTROL_FILE_NAMES.has(posix.basename(normalized)) ||
+    (controlFiles
+      ? controlFiles.includes(normalized) || posix.basename(normalized) === "AGENTS.md"
+      : REPOSITORY_CONTROL_FILE_NAMES.has(posix.basename(normalized))) ||
     /(?:^|\/)(?:migrations?|secrets?)(?:\/|$)/i.test(normalized)
   );
 }

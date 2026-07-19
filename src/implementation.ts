@@ -24,6 +24,11 @@ import {
 import { type ProgressReporter, reportProgress } from "./progress.js";
 import { implementerPrompt, repairPrompt, verifierPrompt } from "./prompts.js";
 import { implementationReport } from "./report.js";
+import {
+  capabilitiesSha256,
+  type RepositoryCapabilities,
+  requireRepositoryCheck,
+} from "./repository-capabilities.js";
 import { isApprovalSensitivePath, pathWithinPrefixes } from "./repository-policy.js";
 import {
   completeContext,
@@ -91,14 +96,19 @@ async function canRestoreHarnessBoundary(repoPath: string, state: RunState): Pro
   }
 }
 
-function projectCommands(harness: StoredHarnessArtifact, plan: DetailedPlan): string[][] {
+interface ProjectCommand {
+  argv: string[];
+  cwd: string;
+}
+
+function projectCommands(harness: StoredHarnessArtifact, plan: DetailedPlan): ProjectCommand[] {
   const commands = [
-    harness.targetedCommand.argv,
-    ...plan.verificationCommands.map(({ argv }) => argv),
+    { argv: harness.targetedCommand.argv, cwd: harness.targetedCommand.cwd ?? "." },
+    ...plan.verificationCommands.map(({ argv, cwd }) => ({ argv, cwd: cwd ?? "." })),
   ];
   const seen = new Set<string>();
-  return commands.filter((argv) => {
-    const key = JSON.stringify(argv);
+  return commands.filter((command) => {
+    const key = JSON.stringify(command);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -151,7 +161,9 @@ async function validateImplementationChange(input: {
       2,
     );
   }
-  const sensitive = actualPaths.filter(isApprovalSensitivePath);
+  const sensitive = actualPaths.filter((path) =>
+    isApprovalSensitivePath(path, input.state.repositoryCapabilities?.controlFiles),
+  );
   if (sensitive.length > 0) {
     input.state.status = "HUMAN_DECISION_REQUIRED";
     throw implementationError(
@@ -178,13 +190,15 @@ async function runProjectCommands(
   sandboxed: boolean,
   protectedConfiguration: Record<string, string>,
   trace: TraceWriter,
+  capabilities: RepositoryCapabilities,
   permissionProfile?: string,
   signal?: AbortSignal,
 ): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
-  for (const argv of projectCommands(harness, plan)) {
+  for (const command of projectCommands(harness, plan)) {
+    requireRepositoryCheck(capabilities, command.argv, command.cwd);
     results.push(
-      await runCommand(argv, repoPath, {
+      await runCommand(command.argv, resolve(repoPath, command.cwd), {
         sandboxed,
         ...(permissionProfile ? { permissionProfile } : {}),
         trace,
@@ -224,6 +238,18 @@ export async function runImplementationAndVerification(
   const roleEffort = options.model ? "medium" : "low";
   const state = await loadRunState(repoPath, options.runId);
   state.repairCount ??= 0;
+  const capabilities = state.repositoryCapabilities as RepositoryCapabilities | undefined;
+  if (
+    !capabilities ||
+    !state.repositoryCapabilitiesSha256 ||
+    capabilitiesSha256(capabilities) !== state.repositoryCapabilitiesSha256
+  ) {
+    throw implementationError(
+      "CAPABILITY_CATALOG_INVALID",
+      "Baseline capability catalog is missing or invalid",
+      2,
+    );
+  }
   if (state.phase !== "harness-complete" || !state.testCommit || !state.branch) {
     throw implementationError(
       "IMPLEMENTATION_NOT_READY",
@@ -378,6 +404,7 @@ export async function runImplementationAndVerification(
       options.sandboxCommands ?? false,
       state.baselineProtectedConfiguration ?? {},
       store.trace,
+      capabilities,
       options.permissionProfile,
       options.signal,
     );
@@ -547,6 +574,7 @@ export async function runImplementationAndVerification(
         options.sandboxCommands ?? false,
         state.baselineProtectedConfiguration ?? {},
         store.trace,
+        capabilities,
         options.permissionProfile,
         options.signal,
       );

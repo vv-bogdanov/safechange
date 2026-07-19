@@ -40,6 +40,8 @@ test("runs D0 and C0 as roots and decision roles as C0 forks", async (t) => {
   assert.equal(result.status, "PLANNED");
   assert.equal(result.decision?.winnerPlanId, "plan-1");
   const state = await readRunState(result.runPath);
+  assert.ok(state.repositoryCapabilities?.checks.some((check) => check.kind === "test"));
+  assert.match(state.repositoryCapabilitiesSha256 ?? "", /^[a-f0-9]{64}$/u);
   const discovery = state.contexts.find((entry) => entry.role === "discovery");
   const contract = state.contexts.find((entry) => entry.role === "contract");
   assert.ok(discovery);
@@ -303,6 +305,29 @@ test("refuses a planning resume when a persisted artifact hash changed", async (
   await assert.rejects(
     validateResumeBoundary(repoPath, planning.runId),
     /Artifact hash mismatch: contract\.json/,
+  );
+});
+
+test("refuses resume when the persisted capability catalog is tampered", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const planning = await runPlanning({
+    repoPath,
+    task: "Change the fixture value.",
+    plannerCount: 1,
+    clientFactory: fakeAppServerFactory(repoPath),
+  });
+  const statePath = join(planning.runPath, "state.json");
+  const state = JSON.parse(await readFile(statePath, "utf8")) as {
+    repositoryCapabilities: { checks: Array<{ argv: string[] }> };
+  };
+  const first = state.repositoryCapabilities.checks[0];
+  assert.ok(first);
+  first.argv = ["npm", "run", "deploy"];
+  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+
+  await assert.rejects(
+    validateResumeBoundary(repoPath, planning.runId),
+    /capability catalog changed|capability catalog is missing or invalid/u,
   );
 });
 

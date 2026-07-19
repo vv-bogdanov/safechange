@@ -15,6 +15,7 @@ export interface BaselineSnapshot {
   commit: string;
   trackedStatus: string;
   files: Record<string, string>;
+  controlFiles: string[];
   protectedConfiguration: Record<string, string>;
   fingerprint: string;
 }
@@ -94,7 +95,10 @@ export async function assertProtectedConfigurationUnchanged(
   }
 }
 
-export async function inspectBaseline(repoPath: string): Promise<BaselineSnapshot> {
+export async function inspectBaseline(
+  repoPath: string,
+  capabilityControlFiles?: string[],
+): Promise<BaselineSnapshot> {
   const root = await canonicalRepositoryPath(await git(repoPath, ["rev-parse", "--show-toplevel"]));
   const commit = await git(root, ["rev-parse", "HEAD"]);
   const branch = await git(root, ["branch", "--show-current"]);
@@ -129,7 +133,13 @@ export async function inspectBaseline(repoPath: string): Promise<BaselineSnapsho
   }
 
   const trackedFiles = (await git(root, ["ls-files"])).split("\n").filter(Boolean);
-  const relevant = trackedFiles.filter((path) => REPOSITORY_CONTROL_FILE_NAMES.has(basename(path)));
+  const catalogControls = new Set(capabilityControlFiles ?? []);
+  const relevant = trackedFiles.filter(
+    (path) =>
+      catalogControls.has(path) ||
+      (!capabilityControlFiles && REPOSITORY_CONTROL_FILE_NAMES.has(basename(path))) ||
+      basename(path) === "AGENTS.md",
+  );
   const files: Record<string, string> = {};
   for (const path of relevant.sort()) {
     files[path] = sha256(await readFile(join(root, path)));
@@ -152,6 +162,7 @@ export async function inspectBaseline(repoPath: string): Promise<BaselineSnapsho
     commit,
     trackedStatus,
     files,
+    controlFiles: relevant.sort(),
     protectedConfiguration,
     fingerprint,
   };
@@ -160,7 +171,7 @@ export async function inspectBaseline(repoPath: string): Promise<BaselineSnapsho
 export async function assertBaselineUnchanged(
   expected: BaselineSnapshot,
 ): Promise<BaselineSnapshot> {
-  const actual = await inspectBaseline(expected.repoPath);
+  const actual = await inspectBaseline(expected.repoPath, expected.controlFiles);
   if (actual.fingerprint !== expected.fingerprint) {
     throw new PreflightError(
       "BASELINE_CHANGED",

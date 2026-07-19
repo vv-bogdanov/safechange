@@ -17,6 +17,11 @@ import { runImplementationAndVerification } from "./implementation.js";
 import { createRunOutcome, type RunOutcome } from "./outcome.js";
 import { type ProgressReporter, reportProgress } from "./progress.js";
 import { implementationReport } from "./report.js";
+import {
+  capabilitiesSha256,
+  discoverRepositoryCapabilities,
+  type RepositoryCapabilities,
+} from "./repository-capabilities.js";
 import { isApprovalSensitivePath } from "./repository-policy.js";
 import { resumablePhase } from "./schemas.js";
 import { hashRecordsEqual, verificationAccepted } from "./verification.js";
@@ -128,6 +133,17 @@ export async function validateResumeBoundary(
   state.model ??= "";
   state.permissionProfile ??= "";
   state.baselineProtectedConfiguration ??= {};
+  const capabilities = state.repositoryCapabilities as RepositoryCapabilities | undefined;
+  if (!capabilities || !state.repositoryCapabilitiesSha256) {
+    throw resumeError("Run does not contain a baseline repository capability catalog");
+  }
+  const currentCapabilities = await discoverRepositoryCapabilities(repoPath);
+  if (
+    capabilitiesSha256(capabilities) !== state.repositoryCapabilitiesSha256 ||
+    capabilitiesSha256(currentCapabilities) !== state.repositoryCapabilitiesSha256
+  ) {
+    throw resumeError("Repository capability catalog changed after baseline");
+  }
   if (state.repoPath !== repoPath || state.runId !== runId || state.repairCount > 1) {
     throw resumeError("Run state identity or repair bound is invalid");
   }
@@ -141,7 +157,7 @@ export async function validateResumeBoundary(
   }
   validateLineage(state);
 
-  const snapshot = await inspectBaseline(repoPath);
+  const snapshot = await inspectBaseline(repoPath, capabilities.controlFiles);
   if (boundary === "planning-complete") {
     if (
       snapshot.commit !== state.baselineCommit ||
@@ -205,7 +221,7 @@ async function finalizeVerifiedRun(
     ) {
       throw releaseGateError("Current branch or HEAD differs from recorded I1");
     }
-    await inspectBaseline(repoPath);
+    await inspectBaseline(repoPath, state.repositoryCapabilities?.controlFiles);
     const harness = (await loadVerifiedArtifact(repoPath, state, "harness")).payload;
     const protectedActual = await hashFiles(repoPath, Object.keys(harness.protectedHashes));
     if (!hashRecordsEqual(harness.protectedHashes, protectedActual)) {
@@ -241,7 +257,9 @@ async function finalizeVerifiedRun(
     }
 
     const releasePaths = await changedPaths(repoPath, state.baselineCommit);
-    const forbidden = releasePaths.filter(isApprovalSensitivePath);
+    const forbidden = releasePaths.filter((path) =>
+      isApprovalSensitivePath(path, state.repositoryCapabilities?.controlFiles),
+    );
     if (forbidden.length > 0) {
       throw releaseGateError(
         `Release diff contains approval-sensitive paths: ${forbidden.join(", ")}`,

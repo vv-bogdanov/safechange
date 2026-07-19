@@ -30,6 +30,7 @@ const referenceSchema = strictObject({
 const commandSchema = strictObject({
   name: stringSchema,
   argv: Type.Array(stringSchema, { minItems: 1 }),
+  cwd: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
   purpose: stringSchema,
 });
 const contractItemSchema = strictObject({ id: stringSchema, statement: stringSchema });
@@ -79,6 +80,7 @@ const safetyTestSchema = strictObject({
   name: stringSchema,
   proves: stringSchema,
   argv: Type.Array(stringSchema, { minItems: 1 }),
+  cwd: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
 });
 const planUnknownSchema = strictObject({
   description: stringSchema,
@@ -181,6 +183,21 @@ const contextEntrySchema = strictObject({
   status: stringEnum("started", "completed", "failed"),
 });
 
+const repositoryCheckSchema = strictObject({
+  id: Type.String({ minLength: 1, maxLength: 255 }),
+  kind: stringEnum("test", "typecheck", "lint", "build"),
+  argv: Type.Array(stringSchema, { minItems: 1, maxItems: 64 }),
+  cwd: Type.String({ minLength: 1, maxLength: 4096 }),
+});
+
+const repositoryCapabilitiesSchema = strictObject({
+  checks: Type.Array(repositoryCheckSchema, { minItems: 1, maxItems: 64 }),
+  testPathPrefixes: Type.Array(stringSchema, { minItems: 1, maxItems: 64 }),
+  testFilePatterns: Type.Array(stringSchema, { maxItems: 32 }),
+  controlFiles: Type.Array(stringSchema, { maxItems: 128 }),
+  sources: Type.Array(stringSchema, { minItems: 1, maxItems: 32 }),
+});
+
 const runPhaseSchema = stringEnum(
   "preflight",
   "discovery",
@@ -226,6 +243,8 @@ const runStateSchema = strictObject({
   baselineCommit: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
   baselineFingerprint: sha256Schema,
   baselineProtectedConfiguration: hashRecordSchema,
+  repositoryCapabilities: Type.Optional(repositoryCapabilitiesSchema),
+  repositoryCapabilitiesSha256: Type.Optional(sha256Schema),
   phase: runPhaseSchema,
   status: runStatusSchema,
   reason: Type.String({ maxLength: 32_768 }),

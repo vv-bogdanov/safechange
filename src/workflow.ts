@@ -17,6 +17,11 @@ import {
 } from "./prompts.js";
 import { planningReport } from "./report.js";
 import {
+  assertUsableCapabilities,
+  capabilitiesSha256,
+  discoverRepositoryCapabilities,
+} from "./repository-capabilities.js";
+import {
   completeContext,
   parseRoleArtifact,
   readOnlyPolicy,
@@ -73,7 +78,10 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
   const startedAt = Date.now();
   const repoPath = await canonicalRepositoryPath(resolve(options.repoPath));
   const roleEffort = options.model ? "medium" : "low";
-  const baseline = await inspectBaseline(repoPath);
+  const repositoryCapabilities = await discoverRepositoryCapabilities(repoPath);
+  assertUsableCapabilities(repositoryCapabilities);
+  const repositoryCapabilitiesSha256 = capabilitiesSha256(repositoryCapabilities);
+  const baseline = await inspectBaseline(repoPath, repositoryCapabilities.controlFiles);
   const runId = createRunId();
   const store = new ArtifactStore(baseline.repoPath, runId, baseline.commit, {
     ...(options.diagnostics ? { diagnostics: true } : {}),
@@ -87,6 +95,13 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
     phase: "preflight",
     commit: baseline.commit,
   });
+  await store.trace.append({
+    component: "repository",
+    event: "capabilities.discovered",
+    status: "completed",
+    phase: "preflight",
+    artifactHash: repositoryCapabilitiesSha256,
+  });
 
   const state: RunState = {
     stateVersion: RUN_STATE_VERSION,
@@ -97,6 +112,8 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
     baselineCommit: baseline.commit,
     baselineFingerprint: baseline.fingerprint,
     baselineProtectedConfiguration: baseline.protectedConfiguration,
+    repositoryCapabilities,
+    repositoryCapabilitiesSha256,
     phase: "preflight",
     status: "RUNNING",
     reason: "",
@@ -155,7 +172,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
     await store.writeState(state);
     const discoveryTurn = await client.runTurn(
       discoveryThread.thread.id,
-      discoveryPrompt(options.task),
+      discoveryPrompt(options.task, repositoryCapabilities),
       {
         cwd: baseline.repoPath,
         sandboxPolicy: readOnlyPolicy,
@@ -234,7 +251,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
       plannerRuns.push(async () => {
         const plannerTurn = await client.runTurn(
           fork.thread.id,
-          plannerPrompt(planId, lens, contractArtifact),
+          plannerPrompt(planId, lens, contractArtifact, repositoryCapabilities),
           {
             cwd: baseline.repoPath,
             sandboxPolicy: readOnlyPolicy,
@@ -256,7 +273,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
             `Planner identity mismatch: expected ${planId}/${lens}, got ${plan.planId}/${plan.lens}`,
           );
         }
-        const firstGate = evaluatePlan(contractArtifact, plan);
+        const firstGate = evaluatePlan(contractArtifact, plan, repositoryCapabilities);
         if (!firstGate.eligible) {
           const correctionContext = startContext(
             `planner-correction:${planId}`,
@@ -267,7 +284,14 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
           state.contexts.push(correctionContext);
           const correctionTurn = await client.runTurn(
             fork.thread.id,
-            plannerCorrectionPrompt(planId, lens, contractArtifact, plan, firstGate),
+            plannerCorrectionPrompt(
+              planId,
+              lens,
+              contractArtifact,
+              plan,
+              firstGate,
+              repositoryCapabilities,
+            ),
             {
               cwd: baseline.repoPath,
               sandboxPolicy: readOnlyPolicy,
@@ -313,7 +337,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
     await store.writeState(state);
 
     await persist("eligibility");
-    eligibility = evaluatePlans(contractArtifact, plans);
+    eligibility = evaluatePlans(contractArtifact, plans, repositoryCapabilities);
     const eligibilityStored = await store.writeArtifact(
       "eligibility",
       "deterministic-eligibility",

@@ -40,6 +40,15 @@ test("runner accepts bounded targeted test and verification scripts", () => {
   assert.throws(() => validateCommandArgv(["npm", "run", "test:unit", "payment"]), /not approved/);
 });
 
+test("runner low-level gate permits catalog tools and rejects shell or lifecycle execution", () => {
+  assert.doesNotThrow(() => validateCommandArgv(["python", "-m", "pytest"]));
+  assert.doesNotThrow(() => validateCommandArgv(["make", "test"]));
+  assert.throws(() => validateCommandArgv(["sh", "-c", "npm test"]), /not approved/u);
+  assert.throws(() => validateCommandArgv(["python", "-c", "print(1)"]), /Inline evaluation/u);
+  assert.throws(() => validateCommandArgv(["make", "install"]), /Lifecycle action/u);
+  assert.throws(() => validateCommandArgv(["/usr/bin/npm", "test"]), /not approved/u);
+});
+
 test("runner fuzz gate rejects shell operators at every argv position", () => {
   const nonOperator = fc.string({ minLength: 1 }).filter((value) => !shellOperatorSet.has(value));
 

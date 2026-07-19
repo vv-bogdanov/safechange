@@ -1,5 +1,9 @@
-import { isTestPath, pathWithinPrefixes } from "./repository-policy.js";
-import { isSafetyTestCommand } from "./runner.js";
+import {
+  authorizeRepositoryCheck,
+  isCapabilityTestPath,
+  type RepositoryCapabilities,
+} from "./repository-capabilities.js";
+import { pathWithinPrefixes } from "./repository-policy.js";
 import type { ChangeContract, DetailedPlan, PlanEligibility } from "./schemas.js";
 
 export type { PlanEligibility } from "./schemas.js";
@@ -11,7 +15,11 @@ function missingIds(required: string[], covered: string[]): string[] {
   return required.filter((id) => !coverage.has(id));
 }
 
-export function evaluatePlan(contract: ChangeContract, plan: DetailedPlan): PlanEligibility {
+export function evaluatePlan(
+  contract: ChangeContract,
+  plan: DetailedPlan,
+  capabilities: RepositoryCapabilities,
+): PlanEligibility {
   const failures: EligibilityFailure[] = [];
   const missingCriteria = missingIds(
     contract.acceptanceCriteria.map((item) => item.id),
@@ -65,18 +73,31 @@ export function evaluatePlan(contract: ChangeContract, plan: DetailedPlan): Plan
     ...plan.files.map((file) => file.path),
     ...plan.steps.flatMap((step) => step.paths),
   ]);
-  if (![...plannedPaths].some(isTestPath)) {
+  if (![...plannedPaths].some((path) => isCapabilityTestPath(capabilities, path))) {
     failures.push({
       code: "MISSING_TEST_PATH",
       message: "Plan does not declare a repository test path for the safety harness",
     });
   }
-  const invalidSafetyCommands = plan.safetyTests.filter((test) => !isSafetyTestCommand(test.argv));
+  const invalidSafetyCommands = plan.safetyTests.filter(
+    (test) => !authorizeRepositoryCheck(capabilities, test.argv, test.cwd ?? ".", "test"),
+  );
   if (invalidSafetyCommands.length > 0) {
     failures.push({
       code: "INVALID_SAFETY_COMMAND",
       message: `Safety checks must run tests: ${invalidSafetyCommands
         .map((test) => test.argv.join(" "))
+        .join("; ")}`,
+    });
+  }
+  const invalidVerificationCommands = plan.verificationCommands.filter(
+    (command) => !authorizeRepositoryCheck(capabilities, command.argv, command.cwd ?? "."),
+  );
+  if (invalidVerificationCommands.length > 0) {
+    failures.push({
+      code: "INVALID_VERIFICATION_COMMAND",
+      message: `Verification checks are outside the baseline catalog: ${invalidVerificationCommands
+        .map((command) => `${command.cwd ?? "."}: ${command.argv.join(" ")}`)
         .join("; ")}`,
     });
   }
@@ -101,6 +122,10 @@ export function evaluatePlan(contract: ChangeContract, plan: DetailedPlan): Plan
   };
 }
 
-export function evaluatePlans(contract: ChangeContract, plans: DetailedPlan[]): PlanEligibility[] {
-  return plans.map((plan) => evaluatePlan(contract, plan));
+export function evaluatePlans(
+  contract: ChangeContract,
+  plans: DetailedPlan[],
+  capabilities: RepositoryCapabilities,
+): PlanEligibility[] {
+  return plans.map((plan) => evaluatePlan(contract, plan, capabilities));
 }

@@ -1,4 +1,5 @@
 import type { PlanEligibility } from "./eligibility.js";
+import type { RepositoryCapabilities } from "./repository-capabilities.js";
 import type {
   ChangeContract,
   DecisionArtifact,
@@ -10,14 +11,17 @@ function data(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
-export function discoveryPrompt(task: string): string {
+export function discoveryPrompt(task: string, capabilities: RepositoryCapabilities): string {
   return `[CHANGESAFELY_ROLE:discovery]
 You are ChangeSafely Scratch Discovery D0. Work read-only. Do not edit files, use network, read .env/secret files, or expose credentials.
 
 User task:
 ${task}
 
-Inspect only the relevant repository surface. Read package scripts to report the actual non-interactive test/build/typecheck argv; later write phases run them inside a sandbox, so do not mark a real command unusable merely because this discovery turn is read-only. Return verified facts with repository-relative file references, test gaps, constraints from instruction files, assumptions, and unknowns. Do not propose an implementation plan. Return only the schema-constrained JSON object.`;
+The deterministic repository capability catalog is:
+${data(capabilities)}
+
+Inspect only the relevant repository surface. Treat the catalog as the complete set of available non-interactive checks; do not invent commands. Later write phases run selected checks inside a sandbox, so do not mark a catalog check unusable merely because this discovery turn is read-only. Return verified facts with repository-relative file references, test gaps, constraints from instruction files, assumptions, and unknowns. Do not propose an implementation plan. Return only the schema-constrained JSON object.`;
 }
 
 export function contractPrompt(task: string, evidence: EvidenceArtifact): string {
@@ -33,11 +37,19 @@ ${data(evidence)}
 Create a concise Change Contract. Give every acceptance criterion and protected invariant a stable unique id. allowedPathPrefixes must be repository-relative path prefixes sufficient for the task, never absolute paths. Mark changes needing human approval. Keep prose fields to one concise sentence and do not repeat the same constraint across arrays. Return only the schema-constrained JSON object.`;
 }
 
-export function plannerPrompt(planId: string, lens: string, contract: ChangeContract): string {
+export function plannerPrompt(
+  planId: string,
+  lens: string,
+  contract: ChangeContract,
+  capabilities: RepositoryCapabilities,
+): string {
   return `[CHANGESAFELY_ROLE:planner]
 You are independent planner ${planId}, forked directly from C0. Your lens is: ${lens}.
 
-Produce one self-contained detailed plan grounded in the repository. Set planId exactly to ${planId} and lens exactly to ${lens}. Cover contract ids exactly, declare every file path, dependency, migration, approval-sensitive change, risk, assumption, and unknown. Commands must be non-interactive argv arrays. For this npm MVP, every safetyTests argv must call an existing npm test script: npm test, npm run test, or npm run test:*; targeted arguments may follow --. Do not target TypeScript source files directly. The dependencies array contains only actual new package names, migrations contains only actual migrations, and approvalRequiredChanges contains only sensitive changes this plan really performs. Use an empty array when there are none; never put "none", policy reminders, or negative sentences in those three arrays. Keep each prose field to one concise sentence, avoid repeating contract text, and materially express the assigned lens without adding needless scope. Acknowledge rejection reasons when this lens is unsuitable. Do not edit files. Return only the schema-constrained JSON object.
+Produce one self-contained detailed plan grounded in the repository. Set planId exactly to ${planId} and lens exactly to ${lens}. Cover contract ids exactly, declare every file path, dependency, migration, approval-sensitive change, risk, assumption, and unknown. Every safety or verification command must copy one exact argv and cwd from the capability catalog below; safetyTests must select a check whose kind is test. Use cwd "." when the catalog does. Do not invent forwarded arguments or target source files directly. The dependencies array contains only actual new package names, migrations contains only actual migrations, and approvalRequiredChanges contains only sensitive changes this plan really performs. Use an empty array when there are none; never put "none", policy reminders, or negative sentences in those three arrays. Keep each prose field to one concise sentence, avoid repeating contract text, and materially express the assigned lens without adding needless scope. Acknowledge rejection reasons when this lens is unsuitable. Do not edit files. Return only the schema-constrained JSON object.
+
+Repository capability catalog:
+${data(capabilities)}
 
 Canonical contract for explicit reference:
 ${data(contract)}`;
@@ -49,6 +61,7 @@ export function plannerCorrectionPrompt(
   contract: ChangeContract,
   plan: DetailedPlan,
   gate: PlanEligibility,
+  capabilities: RepositoryCapabilities,
 ): string {
   return `[CHANGESAFELY_ROLE:planner]
 [CHANGESAFELY_CORRECTION]
@@ -57,7 +70,10 @@ You are independent planner ${planId} with lens is: ${lens}. Your first artifact
 Gate feedback:
 ${data(gate)}
 
-Questions and optional clarifications belong in unknowns, not approvalRequiredChanges. approvalRequiredChanges must contain only changes this plan actually performs that affect manifests, dependencies, migrations, public APIs, permissions, secrets, or deployment; preserve any genuine sensitive change. For this npm MVP, every safetyTests argv must call npm test, npm run test, or npm run test:*; targeted arguments may follow --. Set planId exactly to ${planId} and lens exactly to ${lens}. Return only the complete corrected schema-constrained JSON object.
+Questions and optional clarifications belong in unknowns, not approvalRequiredChanges. approvalRequiredChanges must contain only changes this plan actually performs that affect manifests, dependencies, migrations, public APIs, permissions, secrets, or deployment; preserve any genuine sensitive change. Every command must exactly copy argv and cwd from the repository capability catalog, and every safety test must select kind test. Set planId exactly to ${planId} and lens exactly to ${lens}. Return only the complete corrected schema-constrained JSON object.
+
+Repository capability catalog:
+${data(capabilities)}
 
 Contract:
 ${data(contract)}
@@ -112,6 +128,7 @@ export function testAuthorPrompt(
   plan: DetailedPlan,
   decision: DecisionArtifact,
   allowedTestPaths: string[],
+  capabilities: RepositoryCapabilities,
 ): string {
   return `[CHANGESAFELY_ROLE:test-author]
 You are ChangeSafely Test Author, forked directly from C0. Work as the only writer with network off. Create the minimum meaningful safety harness before production implementation.
@@ -119,7 +136,10 @@ You are ChangeSafely Test Author, forked directly from C0. Work as the only writ
 You may change only these repository-relative test or fixture paths/prefixes:
 ${data(allowedTestPaths)}
 
-Do not change production code, manifests, lockfiles, instruction files, existing test lines, existing public behavior, or secret/config files; only append coverage or create new test/fixture files. Do not use skip, only, weak assertions, or excessive mocks. targetedCommand must exactly match a selected plan safety-test argv and call npm test, npm run test, or npm run test:*; targeted arguments may follow --. Never use direct node, typecheck, or build as the safety test. For a new feature, the new targeted acceptance check must fail on baseline for the expected missing behavior. expectedFailure is a concise human explanation of that missing behavior, not a required literal output substring. Run no deployment or external command. After editing, return only the schema-constrained Harness Artifact. protectedPaths must contain every path you changed.
+Do not change production code, manifests, lockfiles, instruction files, existing test lines, existing public behavior, or secret/config files; only append coverage or create new test/fixture files. Do not use skip, only, weak assertions, or excessive mocks. targetedCommand must exactly match argv and cwd from one selected-plan safety test and a catalog check whose kind is test. Never substitute another command or add forwarded arguments. For a new feature, the new targeted acceptance check must fail on baseline for the expected missing behavior. expectedFailure is a concise human explanation of that missing behavior, not a required literal output substring. Run no deployment or external command. After editing, return only the schema-constrained Harness Artifact. protectedPaths must contain every path you changed.
+
+Repository capability catalog:
+${data(capabilities)}
 
 Contract:
 ${data(contract)}

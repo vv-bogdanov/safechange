@@ -21,19 +21,20 @@ import {
 } from "./git.js";
 import { type ProgressReporter, reportProgress } from "./progress.js";
 import { testAuthorPrompt } from "./prompts.js";
-import { isTestPath, pathWithinPrefixes } from "./repository-policy.js";
+import {
+  authorizeRepositoryCheck,
+  capabilitiesSha256,
+  isCapabilityTestPath,
+  type RepositoryCapabilities,
+} from "./repository-capabilities.js";
+import { pathWithinPrefixes } from "./repository-policy.js";
 import {
   completeContext,
   parseRoleArtifact,
   startContext,
   workspaceWritePolicy,
 } from "./role-runtime.js";
-import {
-  type CommandResult,
-  isSafetyTestCommand,
-  runCommand,
-  toCommandEvidence,
-} from "./runner.js";
+import { type CommandResult, runCommand, toCommandEvidence } from "./runner.js";
 import {
   type DetailedPlan,
   type HarnessArtifact,
@@ -68,11 +69,15 @@ function harnessError(code: string, message: string, exitCode: 1 | 2 = 1): Chang
   });
 }
 
-function selectedTestPaths(plan: DetailedPlan): string[] {
+function selectedTestPaths(plan: DetailedPlan, capabilities: RepositoryCapabilities): string[] {
   const paths = new Set<string>();
-  for (const file of plan.files) if (isTestPath(file.path)) paths.add(file.path);
+  for (const file of plan.files) {
+    if (isCapabilityTestPath(capabilities, file.path)) paths.add(file.path);
+  }
   for (const step of plan.steps) {
-    for (const path of step.paths) if (isTestPath(path)) paths.add(path);
+    for (const path of step.paths) {
+      if (isCapabilityTestPath(capabilities, path)) paths.add(path);
+    }
   }
   if (paths.size === 0) {
     throw harnessError("HARNESS_PLAN_INVALID", "Selected plan does not declare a test path", 2);
@@ -89,6 +94,18 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
   const repoPath = await canonicalRepositoryPath(resolve(options.repoPath));
   const roleEffort = options.model ? "medium" : "low";
   const state = await loadRunState(repoPath, options.runId);
+  const capabilities = state.repositoryCapabilities as RepositoryCapabilities | undefined;
+  if (
+    !capabilities ||
+    !state.repositoryCapabilitiesSha256 ||
+    capabilitiesSha256(capabilities) !== state.repositoryCapabilitiesSha256
+  ) {
+    throw harnessError(
+      "CAPABILITY_CATALOG_INVALID",
+      "Baseline capability catalog is missing or invalid",
+      2,
+    );
+  }
   if (state.status !== "PLANNED") {
     throw harnessError(
       "HARNESS_NOT_READY",
@@ -96,7 +113,7 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
       2,
     );
   }
-  const baseline = await inspectBaseline(repoPath);
+  const baseline = await inspectBaseline(repoPath, capabilities.controlFiles);
   if (
     baseline.commit !== state.baselineCommit ||
     baseline.fingerprint !== state.baselineFingerprint
@@ -114,7 +131,7 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
   }
 
   const { contract, decision, plan } = await loadSelectedPlanArtifacts(repoPath, state);
-  const allowedTestPaths = selectedTestPaths(plan);
+  const allowedTestPaths = selectedTestPaths(plan, capabilities);
   const contractContext = state.contexts.find((entry) => entry.role === "contract");
   if (!contractContext?.turnId) {
     throw harnessError("CANONICAL_CONTEXT_MISSING", "Canonical C0 checkpoint is missing", 2);
@@ -182,7 +199,7 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
     await store.writeState(state);
     const turn = await client.runTurn(
       fork.thread.id,
-      testAuthorPrompt(contract, plan, decision, allowedTestPaths),
+      testAuthorPrompt(contract, plan, decision, allowedTestPaths, capabilities),
       {
         cwd: repoPath,
         sandboxPolicy: workspaceWritePolicy(repoPath),
@@ -207,7 +224,8 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
       throw harnessError("HARNESS_EMPTY", "Test Author did not create a safety harness");
     }
     const unexpected = paths.filter(
-      (path) => !isTestPath(path) || !pathWithinPrefixes(path, allowedTestPaths),
+      (path) =>
+        !isCapabilityTestPath(capabilities, path) || !pathWithinPrefixes(path, allowedTestPaths),
     );
     if (unexpected.length > 0) {
       throw harnessError(
@@ -237,19 +255,20 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
       throw harnessError("HARNESS_SKIP_ONLY", "Harness contains forbidden skip/only usage");
     }
 
+    const targetedCwd = harness.targetedCommand.cwd ?? ".";
     const plannedSafetyCommands = new Set(
-      plan.safetyTests.map((test) => JSON.stringify(test.argv)),
+      plan.safetyTests.map((test) => JSON.stringify([test.cwd ?? ".", test.argv])),
     );
     if (
-      !isSafetyTestCommand(harness.targetedCommand.argv) ||
-      !plannedSafetyCommands.has(JSON.stringify(harness.targetedCommand.argv))
+      !plannedSafetyCommands.has(JSON.stringify([targetedCwd, harness.targetedCommand.argv])) ||
+      !authorizeRepositoryCheck(capabilities, harness.targetedCommand.argv, targetedCwd, "test")
     ) {
       throw harnessError(
         "HARNESS_COMMAND_INVALID",
         "Harness targeted command must be a selected-plan test command",
       );
     }
-    const command = await runCommand(harness.targetedCommand.argv, repoPath, {
+    const command = await runCommand(harness.targetedCommand.argv, resolve(repoPath, targetedCwd), {
       sandboxed: options.sandboxCommands ?? false,
       ...(options.permissionProfile ? { permissionProfile: options.permissionProfile } : {}),
       trace: store.trace,
@@ -308,7 +327,7 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
     state.reason = "Protected safety harness committed before implementation.";
     state.nextAction = "Run the Implementer from C0 using the selected plan and T1.";
     await store.writeState(state);
-    const committed = await inspectBaseline(repoPath);
+    const committed = await inspectBaseline(repoPath, capabilities.controlFiles);
     if (committed.commit !== testCommit) {
       throw harnessError(
         "HARNESS_COMMIT_MISMATCH",

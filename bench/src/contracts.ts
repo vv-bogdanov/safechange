@@ -43,6 +43,7 @@ export interface RunDocument {
     gitVersion: string;
     codexVersion: string;
     changesafelyVersion: string;
+    changesafelyCommit?: string;
     platform: string;
     architecture: string;
   };
@@ -89,6 +90,7 @@ export interface ComparisonManifest {
     gitVersion: string;
     codexVersion: string;
     changesafelyVersion: string;
+    changesafelyCommit?: string;
     platform: string;
     architecture: string;
   };
@@ -195,6 +197,7 @@ const environmentSchema = Type.Object(
     gitVersion: Type.String({ minLength: 1, maxLength: 500 }),
     codexVersion: Type.String({ minLength: 1, maxLength: 500 }),
     changesafelyVersion: Type.String({ minLength: 1, maxLength: 100 }),
+    changesafelyCommit: Type.Optional(commit),
     platform: Type.String({ minLength: 1, maxLength: 100 }),
     architecture: Type.String({ minLength: 1, maxLength: 100 }),
   },

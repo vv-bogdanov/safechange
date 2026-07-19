@@ -71,7 +71,7 @@ export async function runBenchmarkAttempt(
     const scenario = scenarioDefinition(options.benchRoot, options.scenario);
     const taskText = await readFile(scenario.task, "utf8");
     const attempt = await materializeAttempt(scenario, join(temporaryRoot, "workspace"));
-    const environment = await collectEnvironmentVersions(options.codexCommand);
+    const environment = await collectEnvironmentVersions(options.codexCommand, options.projectRoot);
     const evaluatorSha256 = contentSha256(await readFile(scenario.evaluator));
     const measurement = options.measurement ?? "development";
     const comparison = await ensureComparisonManifest(options.resultsRoot, {

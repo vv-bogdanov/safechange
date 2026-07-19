@@ -63,16 +63,21 @@ export async function ensureComparisonManifest(
   return { path, sha256: contentSha256(content), manifest };
 }
 
-export async function collectEnvironmentVersions(codexCommand = "codex") {
-  const [gitVersion, codexVersion] = await Promise.all([
+export async function collectEnvironmentVersions(
+  codexCommand = "codex",
+  projectRoot = process.cwd(),
+) {
+  const [gitVersion, codexVersion, changesafelyCommit] = await Promise.all([
     commandVersion("git"),
     commandVersion(codexCommand),
+    commandOutput("git", ["-C", projectRoot, "rev-parse", "HEAD"]),
   ]);
   return {
     nodeVersion: process.version,
     gitVersion,
     codexVersion,
     changesafelyVersion: VERSION,
+    changesafelyCommit,
     platform: platform(),
     architecture: arch(),
   };
@@ -107,17 +112,21 @@ function comparisonContract(manifest: ComparisonManifest): ComparisonInput {
 }
 
 async function commandVersion(command: string): Promise<string> {
+  return await commandOutput(command, ["--version"]);
+}
+
+async function commandOutput(command: string, args: string[]): Promise<string> {
   try {
-    const { stdout } = await execFileAsync(command, ["--version"], {
+    const { stdout } = await execFileAsync(command, args, {
       timeout: 3_000,
       maxBuffer: 16 * 1024,
     });
     const value = stdout.trim();
-    if (!value) throw new Error(`${command} returned an empty version`);
+    if (!value) throw new Error(`${command} returned empty output`);
     return value.slice(0, 500);
   } catch (error) {
     throw new Error(
-      `Cannot record ${command} version: ${error instanceof Error ? error.message : String(error)}`,
+      `Cannot record ${command}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

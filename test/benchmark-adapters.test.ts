@@ -9,7 +9,11 @@ import {
   parseChangeSafelyOutcome,
   parseDirectEvidence,
 } from "../bench/src/adapters.js";
-import { type ComparisonInput, ensureComparisonManifest } from "../bench/src/comparison.js";
+import {
+  type ComparisonInput,
+  collectEnvironmentVersions,
+  ensureComparisonManifest,
+} from "../bench/src/comparison.js";
 import { contentSha256 } from "../bench/src/evidence.js";
 import { runProcess } from "../bench/src/process.js";
 import { runBenchmarkAttempt } from "../bench/src/run.js";
@@ -79,6 +83,11 @@ test("comparison manifest is immutable and content-addressed", async (t) => {
   assert.equal(first.manifest.scenarioVersion, 1);
 });
 
+test("benchmark environment identifies the exact ChangeSafely commit", async () => {
+  const environment = await collectEnvironmentVersions(process.execPath, process.cwd());
+  assert.match(environment.changesafelyCommit, /^[a-f0-9]{40,64}$/u);
+});
+
 test("controller runs a fair fake Direct and ChangeSafely pair end to end", async (t) => {
   const resultsRoot = await temporaryWorkspace(t, "changesafely-paired-run-");
   const common = {
@@ -117,6 +126,7 @@ test("controller runs a fair fake Direct and ChangeSafely pair end to end", asyn
   });
 
   assert.equal(direct.run.comparisonId, changesafely.run.comparisonId);
+  assert.match(direct.run.environment.changesafelyCommit ?? "", /^[a-f0-9]{40,64}$/u);
   assert.equal(direct.run.scenarioVersion, 2);
   assert.equal(changesafely.run.scenarioVersion, 2);
   assert.equal(direct.run.outcome, "unsafe_green");

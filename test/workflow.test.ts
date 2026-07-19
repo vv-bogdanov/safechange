@@ -229,6 +229,31 @@ test("creates I1, preserves T1, runs commands, and verifies from a fresh C0 fork
   ]);
 });
 
+test("uses the Git diff when the Implementer omits a reported path", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath, "incomplete-implementation-artifact");
+  const planning = await runPlanning({
+    repoPath,
+    task: "Change the fixture value.",
+    plannerCount: 1,
+    clientFactory,
+  });
+  await runHarness({ repoPath, runId: planning.runId, clientFactory });
+
+  const result = await runImplementationAndVerification({
+    repoPath,
+    runId: planning.runId,
+    clientFactory,
+  });
+
+  assert.equal(result.accepted, true);
+  const artifact = JSON.parse(
+    await readFile(join(planning.runPath, "implementation.json"), "utf8"),
+  ) as { payload: { changedPaths: string[]; actualPaths: string[] } };
+  assert.deepEqual(artifact.payload.changedPaths, []);
+  assert.deepEqual(artifact.payload.actualPaths, ["src/value.ts"]);
+});
+
 test("runs the selected plan verification commands without rediscovering package scripts", async (t) => {
   const repoPath = await fixtureRepo(t, "node --test", {
     "check:plan": 'node -e "process.exit(0)"',

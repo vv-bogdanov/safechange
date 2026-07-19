@@ -40,7 +40,6 @@ import {
 import { type CommandResult, runCommand, toCommandEvidence } from "./runner.js";
 import {
   type DetailedPlan,
-  type ImplementationArtifact,
   implementationArtifactSchema,
   type RunPhase,
   type StoredHarnessArtifact,
@@ -129,7 +128,6 @@ function repairableVerification(verification: VerificationArtifact, planPaths: s
 async function validateImplementationChange(input: {
   repoPath: string;
   fromCommit: string;
-  artifact: ImplementationArtifact;
   harness: StoredHarnessArtifact;
   planPaths: string[];
   state: Awaited<ReturnType<typeof loadRunState>>;
@@ -170,14 +168,6 @@ async function validateImplementationChange(input: {
       "APPROVAL_REQUIRED",
       `Implementation changed approval-sensitive paths: ${sensitive.join(", ")}`,
       2,
-    );
-  }
-  const declaredPaths = new Set(input.artifact.changedPaths);
-  const omittedPaths = actualPaths.filter((path) => !declaredPaths.has(path));
-  if (omittedPaths.length > 0) {
-    throw implementationError(
-      "IMPLEMENTATION_ARTIFACT_INCOMPLETE",
-      `Implementation artifact omitted changed paths: ${omittedPaths.join(", ")}`,
     );
   }
   return actualPaths;
@@ -360,7 +350,6 @@ export async function runImplementationAndVerification(
     let actualPaths = await validateImplementationChange({
       repoPath,
       fromCommit: state.testCommit,
-      artifact: implementation,
       harness,
       planPaths,
       state,
@@ -543,7 +532,6 @@ export async function runImplementationAndVerification(
       actualPaths = await validateImplementationChange({
         repoPath,
         fromCommit: implementationCommit,
-        artifact: implementation,
         harness,
         planPaths,
         state,

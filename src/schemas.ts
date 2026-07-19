@@ -134,7 +134,7 @@ export const harnessArtifactSchema = strictObject({
 
 export const implementationArtifactSchema = strictObject({
   summary: stringSchema,
-  changedPaths: Type.Array(stringSchema, { minItems: 1, maxItems: 12 }),
+  changedPaths: Type.Array(stringSchema, { maxItems: 12 }),
   testsAdded: stringArraySchema,
   scopeNotes: stringArraySchema,
   residualRisks: stringArraySchema,
@@ -342,7 +342,7 @@ export type ChangeContract = Mutable<Type.Static<typeof changeContractSchema>>;
 export type DetailedPlan = Mutable<Type.Static<typeof detailedPlanSchema>>;
 export type DecisionArtifact = Mutable<Type.Static<typeof decisionArtifactSchema>>;
 export type HarnessArtifact = Mutable<Type.Static<typeof harnessArtifactSchema>>;
-export type ImplementationArtifact = Mutable<Type.Static<typeof implementationArtifactSchema>>;
+type ImplementationArtifact = Mutable<Type.Static<typeof implementationArtifactSchema>>;
 export type VerificationArtifact = Mutable<Type.Static<typeof verificationArtifactSchema>>;
 export type ContextEntry = Mutable<Type.Static<typeof contextEntrySchema>>;
 export type RunState = Mutable<Type.Static<typeof runStateSchema>>;

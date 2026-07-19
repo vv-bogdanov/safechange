@@ -419,7 +419,7 @@ async function structuredOutput(prompt: string): Promise<unknown> {
     }
     return {
       summary: "Changed the existing value implementation within selected scope.",
-      changedPaths: ["src/value.ts"],
+      changedPaths: mode === "incomplete-implementation-artifact" ? [] : ["src/value.ts"],
       testsAdded: [],
       scopeNotes: ["Protected safety test was not changed."],
       residualRisks: [],

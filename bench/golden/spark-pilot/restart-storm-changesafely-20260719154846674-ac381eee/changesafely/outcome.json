@@ -1,0 +1,6 @@
+{
+  "runId": "2026-07-19T15-47-21-603Z-35786606",
+  "status": "VERIFIED",
+  "reason": "The diff updates readiness to include `DatabaseHealth.isAvailable()` with rejection-to-false handling, adds focused readiness tests for DB-unavailable/available/error scenarios, and keeps liveness/startup behavior unchanged while successfully passing `npm run build` and `npm test` at the final state.",
+  "nextAction": "Review the ChangeSafely branch and merge it through the normal repository process."
+}

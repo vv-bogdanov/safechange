@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "deterministic-runner",
+    "createdAt": "2026-07-19T15:34:31.915Z",
+    "inputs": {
+      "harness": "9927d6d283c8608da0128664a683a70b735d339f66baca86e50ad5c351650977"
+    }
+  },
+  "payload": [
+    {
+      "commandId": "ca3cb921-8a64-427a-a1a3-1f668f392c24",
+      "command": "npm test",
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "cwd": ".",
+      "startedAt": "2026-07-19T15:34:31.552Z",
+      "completedAt": "2026-07-19T15:34:31.896Z",
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "sandboxed": true,
+      "durationMs": 344,
+      "stdoutBytes": 485,
+      "stderrBytes": 0,
+      "stdoutSha256": "a68153354c09063bf7d17ed9ea1a39b386ee3dffb1c7958818631f872c6ef950",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutTruncated": false,
+      "stderrTruncated": false
+    }
+  ]
+}

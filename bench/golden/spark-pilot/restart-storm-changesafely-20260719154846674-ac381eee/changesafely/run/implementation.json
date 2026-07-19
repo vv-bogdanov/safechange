@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "implementer",
+    "createdAt": "2026-07-19T15:48:39.961Z",
+    "inputs": {
+      "decision": "befeaf1e7015841c0215ab779c335b32a95d332ecc8ea520339d8d3211f3a04a",
+      "harness": "4d47936c78b96c1fa987a5316aa1c75f2887681bf463fde6d7bce99107d7df86",
+      "plan-2": "3f5a3ff08765cf939e9f869eca924cf1219204a0e7736715ac2d731e3fbb0ca2"
+    }
+  },
+  "payload": {
+    "summary": "Implemented reversible DB-gated readiness so `HealthService.readiness()` returns false when the process is not running, when `database.isAvailable()` is false, or when that check throws, while leaving other probe signatures intact.",
+    "changedPaths": [
+      "src/health-service.ts"
+    ],
+    "testsAdded": [
+      "npm run build",
+      "npm test"
+    ],
+    "scopeNotes": [
+      "No production or test files were modified beyond `src/health-service.ts`; `test/health-service.test.ts` already contains readiness coverage for DB unavailable/available and DB error cases.",
+      "All existing public API signatures in `HealthService` and `DatabaseHealth` remain unchanged."
+    ],
+    "residualRisks": [
+      "Readiness now depends on DB probe latency and failure mode, so transient DB outages can temporarily reduce routable capacity."
+    ],
+    "implementationCommit": "fbb92a071b4ed0b6c112897efe8cd54bffaf07dc",
+    "actualPaths": [
+      "src/health-service.ts"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "started": true,
+  "startedAt": "2026-07-19T15:33:21.912Z",
+  "completedAt": "2026-07-19T15:35:05.050Z",
+  "durationMs": 103138,
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "stdoutBytes": 3236,
+  "stderrBytes": 0,
+  "stdoutSha256": "d8fd0c14cb1f518be3bddbe157e69caf8036e4745147a8efdae52e72fd5c09fa",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdoutTruncated": false,
+  "stderrTruncated": false
+}

@@ -1,0 +1,41 @@
+{
+  "evidenceVersion": 1,
+  "runId": "tenant-leak-direct-20260719153314861-1cfee783",
+  "files": [
+    {
+      "path": "comparison.json",
+      "bytes": 1016,
+      "sha256": "942f7fecb5e7cc0b6e09917187cbca1b4fccbadb47b9a06bbda90fb633725678"
+    },
+    {
+      "path": "diff.patch",
+      "bytes": 3579,
+      "sha256": "d199747ba1040c3d2ca013017ffeace2b5d4efe889586f5c624da274197cdb8a"
+    },
+    {
+      "path": "direct/final-message.txt",
+      "bytes": 1142,
+      "sha256": "ec8c193bd5f628fa8cb2d4eec1b5809ca97384ed1843eec74ac69a71611b378b"
+    },
+    {
+      "path": "evaluation.json",
+      "bytes": 1668,
+      "sha256": "39dde8fe81b7dcbc6319b3dd0d57dfa33d4fb4a773390300289f7e8400afcaed"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 4207,
+      "sha256": "05255a2ce9ec12cd328b85b7a803d73e3322651020a35e56acad1bb38755e443"
+    },
+    {
+      "path": "run.json",
+      "bytes": 1494,
+      "sha256": "45dd8d2879d1ac16a338c8c1b5620767c86e3f7d7552f377ff03beeb5025b2cc"
+    },
+    {
+      "path": "worker.json",
+      "bytes": 461,
+      "sha256": "55a9e1d97b0584a21055889447cc4820ba3bfbf53d44fefbb56c334e921d27e0"
+    }
+  ]
+}

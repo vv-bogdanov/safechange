@@ -1,0 +1,56 @@
+{
+  "analysisVersion": 1,
+  "runId": "restart-storm-direct-20260719154714179-ec0b7c86",
+  "evidenceManifestSha256": "cb5f0c4282c3b1684914d7ff499b77cefb478daf5ba2b00bac6530ab7a905af2",
+  "scenario": "restart-storm",
+  "candidateTests": {
+    "paths": [
+      "test/health-service.test.ts"
+    ],
+    "patchSha256": "587d87b7f73b5128232e3bd273036990d55e0d6b07b91763b0ef802981d8ff28",
+    "additions": 8,
+    "deletions": 0
+  },
+  "reference": {
+    "passed": true,
+    "process": {
+      "started": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false
+    }
+  },
+  "mutants": [
+    {
+      "id": "database-in-liveness",
+      "killed": true,
+      "process": {
+        "started": true,
+        "exitCode": 1,
+        "signal": null,
+        "timedOut": false
+      }
+    },
+    {
+      "id": "shared-database-probe",
+      "killed": false,
+      "process": {
+        "started": true,
+        "exitCode": 0,
+        "signal": null,
+        "timedOut": false
+      }
+    }
+  ],
+  "mutation": {
+    "killed": 1,
+    "total": 2,
+    "killRate": 0.5
+  },
+  "protectedTests": {
+    "applicable": false,
+    "intact": null,
+    "paths": [],
+    "detail": "Direct mode has no ChangeSafely protected harness."
+  }
+}

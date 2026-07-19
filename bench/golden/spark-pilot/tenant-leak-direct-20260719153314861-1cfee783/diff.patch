@@ -1,0 +1,103 @@
+diff --git a/src/authorization-service.ts b/src/authorization-service.ts
+index dfb76fc..f355ecf 100644
+--- a/src/authorization-service.ts
++++ b/src/authorization-service.ts
+@@ -33,9 +33,17 @@ export class AuthorizationService {
+   async authorize(request: AuthorizationRequest): Promise<boolean> {
+     if (!request.tenantId.trim() || !request.userId.trim()) return false;
+     const subject = { tenantId: request.tenantId, userId: request.userId };
++    const cacheKey = JSON.stringify([subject.tenantId, subject.userId]);
+     try {
+-      await this.backend.version(subject);
++      const cached = await this.cache.get(cacheKey);
++      const backendVersion = await this.backend.version(subject);
++
++      if (cached && cached.version === backendVersion) {
++        return cached.permissions.includes(request.permission);
++      }
++
+       const permissions = await this.backend.loadPermissions(subject);
++      await this.cache.set(cacheKey, { version: backendVersion, permissions });
+       return permissions.includes(request.permission);
+     } catch {
+       return false;
+diff --git a/test/authorization-service.test.ts b/test/authorization-service.test.ts
+index c55b561..d113644 100644
+--- a/test/authorization-service.test.ts
++++ b/test/authorization-service.test.ts
+@@ -13,6 +13,7 @@ import {
+ class MemoryBackend implements AuthorizationBackend {
+   readonly entries = new Map<string, AuthorizationSnapshot>();
+   permissionLoads = 0;
++  versionChecks = 0;
+   fail = false;
+ 
+   set(subject: AuthorizationSubject, version: string, permissions: Permission[]): void {
+@@ -21,6 +22,7 @@ class MemoryBackend implements AuthorizationBackend {
+ 
+   async version(subject: AuthorizationSubject): Promise<string> {
+     if (this.fail) throw new Error("backend unavailable");
++    this.versionChecks += 1;
+     return this.entries.get(key(subject))?.version ?? "missing";
+   }
+ 
+@@ -94,6 +96,59 @@ test("denies invalid subjects and backend errors", async () => {
+   );
+ });
+ 
++test("uses cache for repeated checks of unchanged permissions", async () => {
++  const backend = new MemoryBackend();
++  backend.set({ tenantId: "tenant-a", userId: "user-1" }, "1", ["document:read"]);
++  const service = new AuthorizationService(backend, new MemoryCache());
++
++  assert.equal(
++    await service.authorize({
++      tenantId: "tenant-a",
++      userId: "user-1",
++      permission: "document:read",
++    }),
++    true,
++  );
++  assert.equal(backend.permissionLoads, 1);
++  assert.equal(
++    await service.authorize({
++      tenantId: "tenant-a",
++      userId: "user-1",
++      permission: "document:read",
++    }),
++    true,
++  );
++  assert.equal(backend.permissionLoads, 1);
++});
++
++test("refreshes cache when version changes", async () => {
++  const backend = new MemoryBackend();
++  backend.set({ tenantId: "tenant-a", userId: "user-1" }, "1", ["document:read"]);
++  const service = new AuthorizationService(backend, new MemoryCache());
++
++  assert.equal(
++    await service.authorize({
++      tenantId: "tenant-a",
++      userId: "user-1",
++      permission: "document:write",
++    }),
++    false,
++  );
++  assert.equal(backend.permissionLoads, 1);
++
++  backend.set({ tenantId: "tenant-a", userId: "user-1" }, "2", ["document:write"]);
++
++  assert.equal(
++    await service.authorize({
++      tenantId: "tenant-a",
++      userId: "user-1",
++      permission: "document:write",
++    }),
++    true,
++  );
++  assert.equal(backend.permissionLoads, 2);
++});
++
+ function key(subject: AuthorizationSubject): string {
+   return JSON.stringify([subject.tenantId, subject.userId]);
+ }

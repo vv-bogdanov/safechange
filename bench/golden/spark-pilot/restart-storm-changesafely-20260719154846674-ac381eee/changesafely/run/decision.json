@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "judge",
+    "createdAt": "2026-07-19T15:48:04.563Z",
+    "inputs": {
+      "contract": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b",
+      "eligibility": "776c92ead5cf84aa4f64e356a2a69e20fb14634780347fdf145b0de80bc9a6e2"
+    }
+  },
+  "payload": {
+    "winnerPlanId": "plan-2",
+    "reason": "Plan-2 is the simplest admissible option because it changes only the two files needed for the contract (`src/health-service.ts` and `test/health-service.test.ts`), preserves all method signatures, and keeps validation to the existing `npm run build` and `npm test` gates.",
+    "rejectedPlans": [
+      {
+        "planId": "plan-1",
+        "reason": "It expands scope by including `deployment.json` and `package.json` as active file touches despite no required edits there, which adds complexity without improving contract coverage."
+      },
+      {
+        "planId": "plan-3",
+        "reason": "It adds extra process (read-only deployment validation, extra documentation/recovery steps, and broader risk handling framing) that is not necessary for the minimal contract-compliant implementation."
+      }
+    ],
+    "tradeoffs": [
+      "Plan-2 gives minimal blast radius by limiting changes to readiness logic and unit tests, but accepts existing repository-level blind spot that there is no HTTP-level `/health/ready` probe test.",
+      "Plan-2 relies on existing probe contract and does not attempt infrastructure-level verification that readiness failures always block traffic in all environments."
+    ],
+    "residualRisks": [
+      "`DatabaseHealth.isAvailable()` latency or intermittent failures can cause readiness flapping and temporary routing diversion.",
+      "Readiness will remain unavailable during short DB blips, potentially reducing immediate capacity even when the process is otherwise healthy."
+    ],
+    "humanDecisionRequired": false,
+    "humanDecisionReason": "No additional approval blockers are required for this plan since it remains within allowed paths and does not alter external API or deployment configuration."
+  }
+}

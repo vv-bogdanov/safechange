@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "planner:plan-2",
+    "createdAt": "2026-07-19T15:48:00.244Z",
+    "inputs": {
+      "contract": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b"
+    }
+  },
+  "payload": {
+    "planId": "plan-2",
+    "lens": "reversible-change",
+    "title": "Gate readiness on DB availability with minimal reversible edits",
+    "approach": "Update readiness logic to depend on database availability, add focused unit coverage, and validate with existing npm scripts.",
+    "rationale": "This change is reversible, constrained to health gating behavior, and avoids touching unrelated runtime, deployment, or dependency surfaces.",
+    "acceptanceCoverage": [
+      {
+        "id": "AC-001",
+        "strategy": "Modify `HealthService.readiness()` to return true only when process readiness is true and `DatabaseHealth.isAvailable()` resolves true."
+      },
+      {
+        "id": "AC-002",
+        "strategy": "Handle `isAvailable()` rejection or error by returning readiness false and preserving a deterministic boolean result."
+      },
+      {
+        "id": "AC-003",
+        "strategy": "Keep liveness and startup method signatures and behavior unchanged, limiting implementation edits to readiness semantics and test setup."
+      },
+      {
+        "id": "AC-004",
+        "strategy": "Add tests in `test/health-service.test.ts` that assert readiness false under DB unavailability and true when DB is available while process state is running."
+      },
+      {
+        "id": "AC-005",
+        "strategy": "Verify success through existing scripts `npm run build` and `npm test`."
+      }
+    ],
+    "invariantProtection": [
+      {
+        "id": "PI-001",
+        "strategy": "Do not change public API types or signatures in `HealthService` or `DatabaseHealth`."
+      },
+      {
+        "id": "PI-002",
+        "strategy": "Do not add production dependencies and keep strict TypeScript behavior unchanged."
+      },
+      {
+        "id": "PI-003",
+        "strategy": "Limit behavioral change to readiness gating only so startup/liveness and non-health deployment settings remain unchanged."
+      },
+      {
+        "id": "PI-004",
+        "strategy": "Avoid editing `deployment.json` probe definitions in this plan unless explicitly approved."
+      }
+    ],
+    "files": [
+      {
+        "path": "src/health-service.ts",
+        "purpose": "Implement DB-gated readiness behavior in HealthService."
+      },
+      {
+        "path": "test/health-service.test.ts",
+        "purpose": "Add coverage for readiness behavior under DB availability and unavailability."
+      }
+    ],
+    "steps": [
+      {
+        "id": "S1",
+        "description": "Inspect current readiness and probe implementations plus `DatabaseHealth` contract to confirm minimal insertion points for DB availability checks.",
+        "paths": [
+          "src/health-service.ts"
+        ]
+      },
+      {
+        "id": "S2",
+        "description": "Implement readiness as a process-ready plus DB-availability check with strict failure-to-false handling.",
+        "paths": [
+          "src/health-service.ts"
+        ]
+      },
+      {
+        "id": "S3",
+        "description": "Add/adjust unit tests for DB true/false readiness outcomes while preserving existing liveness/startup assertions.",
+        "paths": [
+          "test/health-service.test.ts"
+        ]
+      },
+      {
+        "id": "S4",
+        "description": "Run build and test scripts to confirm no regressions before merge.",
+        "paths": [
+          "src/health-service.ts",
+          "test/health-service.test.ts"
+        ]
+      }
+    ],
+    "safetyTests": [
+      {
+        "name": "Full test script execution",
+        "proves": "Regression coverage for readiness behavior passes through the configured npm test entrypoint.",
+        "argv": [
+          "npm",
+          "test"
+        ]
+      }
+    ],
+    "verificationCommands": [
+      {
+        "name": "Build",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "purpose": "Validate strict TypeScript build after service and test changes."
+      },
+      {
+        "name": "Test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Validate complete repository test suite through the configured npm script."
+      }
+    ],
+    "dependencies": [],
+    "migrations": [],
+    "approvalRequiredChanges": [],
+    "risks": [
+      "If DB availability checks are slow or intermittent, readiness may flap and temporarily reduce routing capacity.",
+      "Transient DB failures can reduce readiness even when other subsystems are healthy, so probe tuning may be needed after rollout."
+    ],
+    "assumptions": [
+      "Readiness at `/health/ready` is the effective traffic-routing gate for this deployment.",
+      "Database availability checks are safe to perform inside readiness without unacceptable probe overhead.",
+      "`npm test` and `npm run build` remain stable validation entrypoints for this repo."
+    ],
+    "unknowns": [
+      {
+        "description": "Whether upstream infrastructure uses additional routing inputs beyond Kubernetes readiness (for example gateways or service mesh logic).",
+        "critical": true,
+        "resolution": "Confirm with platform/runtime owners before rollout and document evidence if divergence exists."
+      },
+      {
+        "description": "Whether external routing components already bypass readiness probes in this environment.",
+        "critical": true,
+        "resolution": "Verify deployment runtime behavior in environment-specific docs or tests during rollout."
+      }
+    ],
+    "recovery": [
+      "Revert the changed readiness branch in `src/health-service.ts` to process-only readiness and remove newly added DB-specific readiness assertions from `test/health-service.test.ts`.",
+      "If validation fails, isolate and revert just the new readiness code path and rerun `npm run build` plus `npm test`."
+    ],
+    "rejectionReasons": []
+  }
+}

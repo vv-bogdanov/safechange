@@ -1,0 +1,56 @@
+{
+  "analysisVersion": 1,
+  "runId": "tenant-leak-direct-20260719153314861-1cfee783",
+  "evidenceManifestSha256": "9e73a49b7daec30fa9fcb71feb21af32cdece084f2250b74a04778dc6d6c2086",
+  "scenario": "tenant-leak",
+  "candidateTests": {
+    "paths": [
+      "test/authorization-service.test.ts"
+    ],
+    "patchSha256": "f676d1e0607c17d4311dcf54160969761e07317c1be67869ffe1bae404057cd7",
+    "additions": 55,
+    "deletions": 0
+  },
+  "reference": {
+    "passed": true,
+    "process": {
+      "started": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false
+    }
+  },
+  "mutants": [
+    {
+      "id": "user-only-key",
+      "killed": false,
+      "process": {
+        "started": true,
+        "exitCode": 0,
+        "signal": null,
+        "timedOut": false
+      }
+    },
+    {
+      "id": "stale-positive",
+      "killed": true,
+      "process": {
+        "started": true,
+        "exitCode": 1,
+        "signal": null,
+        "timedOut": false
+      }
+    }
+  ],
+  "mutation": {
+    "killed": 1,
+    "total": 2,
+    "killRate": 0.5
+  },
+  "protectedTests": {
+    "applicable": false,
+    "intact": null,
+    "paths": [],
+    "detail": "Direct mode has no ChangeSafely protected harness."
+  }
+}

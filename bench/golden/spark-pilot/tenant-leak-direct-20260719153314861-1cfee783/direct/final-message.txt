@@ -1,0 +1,17 @@
+Implemented.
+
+- Updated `[AuthorizationService](/home/dev/.changesafely-benchmark-attempt-Ei6bpx/workspace/src/authorization-service.ts)` to use the existing cache:
+  - Builds a cache key from `(tenantId, userId)`.
+  - Reads `AuthorizationSnapshot` from cache.
+  - Calls `backend.version(subject)` and only falls back to `backend.loadPermissions(subject)` when cache is missing or stale.
+  - On fresh permissions load, writes back `version + permissions` to cache.
+  - Keeps the public `AuthorizationService` constructor and methods unchanged.
+
+- Updated `[test/authorization-service.test.ts](/home/dev/.changesafely-benchmark-attempt-Ei6bpx/workspace/test/authorization-service.test.ts)`:
+  - Added assertions that repeated authorization checks with unchanged permissions use cache (no additional permission loads).
+  - Added assertions that cache refreshes after backend version changes.
+  - Extended `MemoryBackend` test double with `versionChecks` counter (non-breaking internal test-only change).
+
+- Scope stayed limited to authorization caching and its tests.
+
+1. Run `npm test` if you want me to verify the updated behavior end-to-end.

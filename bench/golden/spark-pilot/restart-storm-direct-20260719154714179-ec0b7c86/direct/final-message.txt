@@ -1,0 +1,11 @@
+Implemented.
+
+- Updated `/health/ready` readiness logic to fail when the database is unavailable by changing `HealthService.readiness()` to require both:
+  - process is running
+  - `database.isAvailable()` resolves `true`
+- Added a regression test for DB-down readiness in [`test/health-service.test.ts`](test/health-service.test.ts).  
+
+Key file changes:
+- [`src/health-service.ts`](src/health-service.ts)
+
+This ensures traffic routing via readiness checks stops while the DB is unavailable, while leaving deployment config untouched.

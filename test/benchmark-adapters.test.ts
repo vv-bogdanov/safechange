@@ -75,6 +75,7 @@ test("comparison manifest is immutable and content-addressed", async (t) => {
   assert.equal(first.manifest.comparisonId, second.manifest.comparisonId);
   assert.equal(first.sha256, second.sha256);
   assert.equal(first.manifest.taskText, taskText);
+  assert.equal(first.manifest.measurement, "development");
 });
 
 test("controller runs a fair fake Direct and ChangeSafely pair end to end", async (t) => {
@@ -84,6 +85,7 @@ test("controller runs a fair fake Direct and ChangeSafely pair end to end", asyn
     benchRoot: join(process.cwd(), "bench"),
     resultsRoot,
     scenario: "double-charge",
+    measurement: "development" as const,
     model: "gpt-5.3-codex-spark",
     effort: "medium",
     timeoutMs: 10_000,
@@ -141,6 +143,7 @@ async function temporaryWorkspace(t: test.TestContext, prefix: string): Promise<
 function comparisonInput(): ComparisonInput {
   return {
     scenario: "double-charge",
+    measurement: "development",
     taskText,
     taskSha256: contentSha256(taskText),
     baselineCommit: "a".repeat(40),

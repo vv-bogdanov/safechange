@@ -23,6 +23,7 @@ const help = `ChangeSafely Risk Suite
 
 Usage:
   npm run benchmark:smoke -- --scenario <id> --mode direct|changesafely [--model ${SPARK_MODEL}]
+  npm run benchmark -- run --scenario <id> --mode direct|changesafely --model <id> --final
   npm run benchmark -- validate --scenario double-charge|tenant-leak|restart-storm
   npm run benchmark -- canary --scenario <id>
   npm run benchmark -- evaluate --run <run-id> [--results <path>]
@@ -42,6 +43,7 @@ export async function main(argv: string[]): Promise<number> {
       options: {
         help: { type: "boolean", short: "h" },
         effort: { type: "string", default: "medium" },
+        final: { type: "boolean" },
         mode: { type: "string" },
         model: { type: "string" },
         results: { type: "string" },
@@ -104,10 +106,15 @@ export async function main(argv: string[]): Promise<number> {
     if (command === "run") {
       const scenario = required(parsed.values.scenario, "--scenario");
       const mode = benchmarkMode(required(parsed.values.mode, "--mode"));
-      const model = parsed.values.model?.trim() || SPARK_MODEL;
-      if (model !== SPARK_MODEL) {
+      const finalMeasurement = parsed.values.final ?? false;
+      const explicitModel = parsed.values.model?.trim();
+      if (finalMeasurement && !explicitModel) {
+        throw new Error("--model is required with --final");
+      }
+      const model = explicitModel || SPARK_MODEL;
+      if (!finalMeasurement && model !== SPARK_MODEL) {
         throw new Error(
-          `Development runs are locked to ${SPARK_MODEL}. Final measurements require a separate explicit user command after Spark evaluation.`,
+          `Development runs are locked to ${SPARK_MODEL}. Use an explicit --final command only after Spark evaluation.`,
         );
       }
       const effort = required(parsed.values.effort, "--effort");
@@ -118,12 +125,15 @@ export async function main(argv: string[]): Promise<number> {
       if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 3_600) {
         throw new Error("--timeout must be an integer from 1 to 3600 seconds");
       }
+      const resultsRoot = resolve(parsed.values.results ?? join(benchRoot, "results"));
+      if (finalMeasurement) await requireEvaluatedSparkPair(resultsRoot, scenario);
       const evidence = await runBenchmarkAttempt({
         projectRoot,
         benchRoot,
-        resultsRoot: resolve(parsed.values.results ?? join(benchRoot, "results")),
+        resultsRoot,
         scenario,
         mode,
+        measurement: finalMeasurement ? "final" : "development",
         model,
         effort,
         timeoutMs: timeoutSeconds * 1_000,
@@ -135,6 +145,7 @@ export async function main(argv: string[]): Promise<number> {
             runId: evidence.run.runId,
             comparisonId: evidence.run.comparisonId,
             mode: evidence.run.mode,
+            measurement: evidence.run.measurement ?? "development",
             outcome: evidence.run.outcome,
             evidencePath: evidence.path,
           },
@@ -199,6 +210,28 @@ function required(value: string | undefined, option: string): string {
   const result = value?.trim();
   if (!result) throw new Error(`${option} is required`);
   return result;
+}
+
+async function requireEvaluatedSparkPair(resultsRoot: string, scenario: string): Promise<void> {
+  try {
+    const report = await buildBenchmarkReport(resultsRoot);
+    if (
+      report.comparisons.some(
+        (comparison) =>
+          comparison.scenario === scenario &&
+          comparison.model === SPARK_MODEL &&
+          comparison.measurement === "development" &&
+          comparison.paired,
+      )
+    ) {
+      return;
+    }
+  } catch {
+    // Report loading is fail-closed below so the user gets one stable gate message.
+  }
+  throw new Error(
+    `--final requires an evaluated paired ${SPARK_MODEL} comparison for scenario ${scenario}`,
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "deterministic-eligibility",
+    "createdAt": "2026-07-19T15:34:13.026Z",
+    "inputs": {
+      "contract": "8db47bdd5c8722da4377a69f2a17374cb20ad11698821f34bf2cd10767dafed4",
+      "plan-1": "091caf05f379051f2d8f2e428a6da5fdc669fc88f133063ec09a5f72ab0a495f",
+      "plan-2": "02078b88d5656980e18489e97bc7fd9b922b68faef252b54cf08294cc33f5eba",
+      "plan-3": "9013322b8a895b2579f427322646921dfc52aabed6c36d0e79aab235c576e176"
+    }
+  },
+  "payload": [
+    {
+      "planId": "plan-1",
+      "eligible": true,
+      "failures": [],
+      "humanDecisionReasons": []
+    },
+    {
+      "planId": "plan-2",
+      "eligible": true,
+      "failures": [],
+      "humanDecisionReasons": []
+    },
+    {
+      "planId": "plan-3",
+      "eligible": true,
+      "failures": [],
+      "humanDecisionReasons": []
+    }
+  ]
+}

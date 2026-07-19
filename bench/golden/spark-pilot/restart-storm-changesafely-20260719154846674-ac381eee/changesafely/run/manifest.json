@@ -1,0 +1,98 @@
+{
+  "manifestVersion": 1,
+  "runId": "2026-07-19T15-47-21-603Z-35786606",
+  "changesafelyVersion": "0.1.0",
+  "nodeVersion": "v24.15.0",
+  "gitVersion": "git version 2.53.0",
+  "codexVersion": "codex-cli 0.144.6",
+  "appServerUserAgent": "changesafely/0.144.6 (Ubuntu 26.4.0; x86_64) tmux-256color (changesafely; 0.1.0)",
+  "platform": "linux",
+  "platformRelease": "7.0.0-28-generic",
+  "architecture": "x64",
+  "model": "gpt-5.3-codex-spark",
+  "startedAt": "2026-07-19T15:47:21.644Z",
+  "completedAt": "2026-07-19T15:48:46.368Z",
+  "resumeCount": 0,
+  "roles": [
+    {
+      "role": "discovery",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "01aef7b620ebe1af0ff2b0b9faa7c00363018756012095f7ef4c0f9bdd977aa7",
+      "outputSchemaSha256": "da036a42ef6474a34d9f088c3f20a1c0b26969e29536d6606cfd34f02b0eae26"
+    },
+    {
+      "role": "contract",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "5e88ce91bfc101acf6a8d26d14c99bde245f3f031fe2cab2889df3bf2181c3ec",
+      "outputSchemaSha256": "5bbc1a9577fdb757bb6a90fb3de6408fcc402bc0037d7d4ea224047425e1c244"
+    },
+    {
+      "role": "planner:plan-1",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "7b7ac9e397a5da5fd790cec51fe3b2e5bc0d9ed55c4ccfcda1cf107fb1ee44e1",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner:plan-2",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "37f497047f474473bf9b1bd464741c4e461a6de527d9d91fc4035d16f6ed0f7e",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner:plan-3",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "c78fd7f91f558434408179fc382998140057922f50163060603e64817d81c6a8",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner-correction:plan-2",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "d8a05b73704894af0e5644a2ab317c85769086bd4790101dd14e41276b9c0690",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "judge",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "f4dae0a37e1da9489b908c438437f24e74e9d4b34ccbaf4ab4ff3b8e5397f0ff",
+      "outputSchemaSha256": "fd84281e0b3fc7a3c5ea1c412ede9fad6a5f679678d0b7580edcbf4e26068a7e"
+    },
+    {
+      "role": "test-author",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "5a6964a47df07013012dacea76071f3fce62be9b37f18584e3577be77937df9d",
+      "outputSchemaSha256": "4a1a3b76c95bb737a5fe3522611801c90670a81537a7a13110a309713136d906"
+    },
+    {
+      "role": "implementer",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "2786ccaed8b40c7929231e49a9fdf5b317a6c903e65339c5f36fd989f2d4deec",
+      "outputSchemaSha256": "48d506a56e84c90f93fa065d45e8ee27b9f8727f798b4ce9fb303a12d908777d"
+    },
+    {
+      "role": "verifier",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "e13e92fb1daca788fbbdbf1004e150561ddd35a9cca60256941f947c8b4f16c6",
+      "outputSchemaSha256": "1c9620d5cd1e30d2afb6546d6a82e31300125add255c4f63b0f6748b550fb865"
+    }
+  ]
+}

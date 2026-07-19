@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "planner:plan-1",
+    "createdAt": "2026-07-19T15:34:13.017Z",
+    "inputs": {
+      "contract": "8db47bdd5c8722da4377a69f2a17374cb20ad11698821f34bf2cd10767dafed4"
+    }
+  },
+  "payload": {
+    "planId": "plan-1",
+    "lens": "minimal-change",
+    "title": "Add minimal cache lookup path to authorization checks with focused regression tests",
+    "approach": "Add a small read-through cache branch inside authorize using the existing interfaces and keep all permission decision logic unchanged.",
+    "rationale": "The change only inserts cache-aware snapshot retrieval and update in the authorization hot path, which reduces backend calls without widening scope.",
+    "acceptanceCoverage": [
+      {
+        "id": "AC-01",
+        "strategy": "Insert an AuthorizationCache.get call before any backend loadPermissions call and only proceed to backend reads if cache lookup cannot satisfy the request."
+      },
+      {
+        "id": "AC-02",
+        "strategy": "On cache miss or undefined snapshot, call backend.version and backend.loadPermissions, then write a full snapshot to cache.set before evaluating permission checks."
+      },
+      {
+        "id": "AC-03",
+        "strategy": "When cache returns a snapshot whose version matches backend.version for the same subject context, reuse cached permissions and skip backend.loadPermissions for that request."
+      },
+      {
+        "id": "AC-04",
+        "strategy": "When cache snapshot version is missing or differs, fetch a fresh snapshot from backend and overwrite the cache entry before authorization continues."
+      },
+      {
+        "id": "AC-05",
+        "strategy": "Preserve existing behavior for allow/deny, tenant separation, invalid-subject validation, and backend-error propagation while adding cache paths."
+      },
+      {
+        "id": "AC-06",
+        "strategy": "Extend test/authorization-service.test.ts with dedicated cache miss, cache hit, stale refresh, and cache write assertions plus backend call counting by tenant context."
+      }
+    ],
+    "invariantProtection": [
+      {
+        "id": "PI-01",
+        "strategy": "Do not modify exported types or public methods, including constructor and authorize, and keep adapter wiring unchanged."
+      },
+      {
+        "id": "PI-02",
+        "strategy": "Do not add production dependencies or alter non-test package metadata."
+      },
+      {
+        "id": "PI-03",
+        "strategy": "Do not change authorization semantics; only add cache-backed branching around existing permission evaluation."
+      },
+      {
+        "id": "PI-04",
+        "strategy": "Restrict file changes to src/authorization-service.ts and test/authorization-service.test.ts only."
+      },
+      {
+        "id": "PI-05",
+        "strategy": "Keep strict TypeScript settings unchanged and resolve new types using existing interfaces in the same strict compilation model."
+      }
+    ],
+    "files": [
+      {
+        "path": "src/authorization-service.ts",
+        "purpose": "Implement minimal cache-aware authorize flow with version-based staleness checks."
+      },
+      {
+        "path": "test/authorization-service.test.ts",
+        "purpose": "Add cache behavior tests that verify miss/hit/refresh and tenant-isolated keys plus backend-call minimization expectations."
+      }
+    ],
+    "steps": [
+      {
+        "id": "S1",
+        "description": "Review current authorize and cache interface usage to confirm insertion point and avoid changing public control flow semantics.",
+        "paths": [
+          "src/authorization-service.ts"
+        ]
+      },
+      {
+        "id": "S2",
+        "description": "Implement cache-first snapshot resolution and version-checked refresh logic, with cache.set applied after successful backend load.",
+        "paths": [
+          "src/authorization-service.ts"
+        ]
+      },
+      {
+        "id": "S3",
+        "description": "Implement a deterministic cache-aware test fixture with explicit counters to observe backend.get/load frequency and cache persistence.",
+        "paths": [
+          "test/authorization-service.test.ts"
+        ]
+      },
+      {
+        "id": "S4",
+        "description": "Add acceptance tests for cache miss, cache hit, stale version refresh, tenant-isolated cache behavior, and verify authorization outcomes remain unchanged.",
+        "paths": [
+          "test/authorization-service.test.ts"
+        ]
+      },
+      {
+        "id": "S5",
+        "description": "Run the required non-interactive npm test pipeline to confirm compile and behavior constraints.",
+        "paths": [
+          "src/authorization-service.ts",
+          "test/authorization-service.test.ts"
+        ]
+      }
+    ],
+    "safetyTests": [
+      {
+        "name": "npm test",
+        "proves": "Validates strict compilation and all unit tests for authorization and cache behavior in the repository-defined pipeline.",
+        "argv": [
+          "npm",
+          "test"
+        ]
+      }
+    ],
+    "verificationCommands": [
+      {
+        "name": "npm test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Run the repository-mandated test command (build + node test runner) after all edits."
+      }
+    ],
+    "dependencies": [],
+    "migrations": [],
+    "approvalRequiredChanges": [],
+    "risks": [
+      "A bad cache key choice could cross-contaminate tenant-scoped data.",
+      "Version mismatch handling could allow stale permissions to be used on an expired cache snapshot.",
+      "An overly aggressive cache hit could inadvertently skip required backend validation for error and edge cases."
+    ],
+    "assumptions": [
+      "Cache key scope can stay subject-derived for initial implementation without API change.",
+      "backend.version remains the canonical freshness signal for snapshot invalidation.",
+      "Current test harness can be extended with spy-backed adapters to assert call counts."
+    ],
+    "unknowns": [
+      {
+        "description": "Whether cache.get/cache.set failures should be treated as hard errors or soft-fallthrough to backend.",
+        "critical": true,
+        "resolution": "Capture this behavior in cache-focused tests using best-effort fallback unless explicit fallback policy is provided later."
+      },
+      {
+        "description": "Whether the cache key should include explicit tenant scoping beyond the subject shape already used by backend calls.",
+        "critical": true,
+        "resolution": "Implement keying using the subject-driven identifier first, then widen only if future requirements demand it."
+      }
+    ],
+    "recovery": [
+      "If tests reveal changed permission outcomes, revert to the prior decision path and gate cache use strictly to validated snapshot/permission matching.",
+      "If cache-keying causes tenant isolation failures, switch key derivation to the subject representation already proven by existing tenant-separation behavior.",
+      "If cache-failure semantics break expectations, preserve existing behavior by adjusting cache adapter contract handling in tests only, without changing public API."
+    ],
+    "rejectionReasons": []
+  }
+}

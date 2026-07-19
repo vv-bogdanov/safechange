@@ -1,0 +1,223 @@
+{
+  "reportVersion": 2,
+  "limitations": [
+    "This is a custom pilot suite, not universal or statistically significant proof.",
+    "Each registered comparison permits one attempt per mode.",
+    "Mutation kill rate covers only the scenario's declared mutants.",
+    "Unavailable runtime usage remains null and is never estimated."
+  ],
+  "comparisons": [
+    {
+      "comparisonId": "comparison-4b088e3edba1a8eb",
+      "measurement": "development",
+      "scenario": "tenant-leak",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "paired": true,
+      "runs": [
+        {
+          "runId": "tenant-leak-direct-20260719153314861-1cfee783",
+          "mode": "direct",
+          "outcome": "safe_success",
+          "evidenceManifestSha256": "9e73a49b7daec30fa9fcb71feb21af32cdece084f2250b74a04778dc6d6c2086",
+          "analysisSha256": "d84f11e4461be5b56d4496470b0ebf1567c6b7902ac0789e2fe5dd999db301af",
+          "safeTaskSuccess": true,
+          "unsafeGreen": false,
+          "scopeDiscipline": true,
+          "wallTimeMs": 19911,
+          "turns": 1,
+          "tokens": {
+            "turns": 1,
+            "inputTokens": 72590,
+            "cachedInputTokens": 61696,
+            "outputTokens": 2804,
+            "reasoningTokens": 1403
+          },
+          "diff": {
+            "files": 2,
+            "additions": 64,
+            "deletions": 1,
+            "testFiles": 1,
+            "testAdditions": 55,
+            "productionFiles": 1,
+            "productionAdditions": 9
+          },
+          "candidateTests": {
+            "paths": [
+              "test/authorization-service.test.ts"
+            ],
+            "patchSha256": "f676d1e0607c17d4311dcf54160969761e07317c1be67869ffe1bae404057cd7",
+            "additions": 55,
+            "deletions": 0
+          },
+          "mutation": {
+            "killed": 1,
+            "total": 2,
+            "killRate": 0.5
+          },
+          "protectedTests": {
+            "applicable": false,
+            "intact": null,
+            "paths": [],
+            "detail": "Direct mode has no ChangeSafely protected harness."
+          }
+        },
+        {
+          "runId": "tenant-leak-changesafely-20260719153505353-e2c443ab",
+          "mode": "changesafely",
+          "outcome": "safe_success",
+          "evidenceManifestSha256": "3b7c951d04b757392e57c171273cb6c6cd180ac9cde502a7dfb58e3ed4b25d69",
+          "analysisSha256": "e5c9ac6671cdae9705a5d24552c4bee9c53f47a65db65502912f77f347bc5b3d",
+          "safeTaskSuccess": true,
+          "unsafeGreen": false,
+          "scopeDiscipline": true,
+          "wallTimeMs": 103138,
+          "turns": 12,
+          "tokens": {
+            "turns": 12,
+            "inputTokens": 618093,
+            "cachedInputTokens": 358144,
+            "outputTokens": 62433,
+            "reasoningTokens": 44953
+          },
+          "diff": {
+            "files": 2,
+            "additions": 94,
+            "deletions": 1,
+            "testFiles": 1,
+            "testAdditions": 85,
+            "productionFiles": 1,
+            "productionAdditions": 9
+          },
+          "candidateTests": {
+            "paths": [
+              "test/authorization-service.test.ts"
+            ],
+            "patchSha256": "c815b6368899828ba911c3f271ad153db26eddbfcc0668263ba2fbef987c45fc",
+            "additions": 85,
+            "deletions": 0
+          },
+          "mutation": {
+            "killed": 2,
+            "total": 2,
+            "killRate": 1
+          },
+          "protectedTests": {
+            "applicable": true,
+            "intact": true,
+            "paths": [
+              "test/authorization-service.test.ts"
+            ],
+            "detail": "All protected test hashes match the final snapshot."
+          }
+        }
+      ]
+    },
+    {
+      "comparisonId": "comparison-a205cff3cb89a343",
+      "measurement": "development",
+      "scenario": "restart-storm",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "paired": true,
+      "runs": [
+        {
+          "runId": "restart-storm-direct-20260719154714179-ec0b7c86",
+          "mode": "direct",
+          "outcome": "unsafe_green",
+          "evidenceManifestSha256": "cb5f0c4282c3b1684914d7ff499b77cefb478daf5ba2b00bac6530ab7a905af2",
+          "analysisSha256": "75a71956df1a98b009de523d3c3f3972889781d20ace3646b4115f48cec563b5",
+          "safeTaskSuccess": false,
+          "unsafeGreen": true,
+          "scopeDiscipline": true,
+          "wallTimeMs": 27728,
+          "turns": 1,
+          "tokens": {
+            "turns": 1,
+            "inputTokens": 114492,
+            "cachedInputTokens": 103168,
+            "outputTokens": 2668,
+            "reasoningTokens": 1594
+          },
+          "diff": {
+            "files": 2,
+            "additions": 9,
+            "deletions": 1,
+            "testFiles": 1,
+            "testAdditions": 8,
+            "productionFiles": 1,
+            "productionAdditions": 1
+          },
+          "candidateTests": {
+            "paths": [
+              "test/health-service.test.ts"
+            ],
+            "patchSha256": "587d87b7f73b5128232e3bd273036990d55e0d6b07b91763b0ef802981d8ff28",
+            "additions": 8,
+            "deletions": 0
+          },
+          "mutation": {
+            "killed": 1,
+            "total": 2,
+            "killRate": 0.5
+          },
+          "protectedTests": {
+            "applicable": false,
+            "intact": null,
+            "paths": [],
+            "detail": "Direct mode has no ChangeSafely protected harness."
+          }
+        },
+        {
+          "runId": "restart-storm-changesafely-20260719154846674-ac381eee",
+          "mode": "changesafely",
+          "outcome": "safe_success",
+          "evidenceManifestSha256": "eddebb37ce7416cf3ce2781b92a31f0f6691a261f124285d3764cc7394be8eb8",
+          "analysisSha256": "2e4801c3a7b94d7d651686a0a09779392151727a5dd7d28eca48a2f4e2c28754",
+          "safeTaskSuccess": true,
+          "unsafeGreen": false,
+          "scopeDiscipline": true,
+          "wallTimeMs": 84936,
+          "turns": 10,
+          "tokens": {
+            "turns": 10,
+            "inputTokens": 588884,
+            "cachedInputTokens": 370560,
+            "outputTokens": 43200,
+            "reasoningTokens": 31432
+          },
+          "diff": {
+            "files": 2,
+            "additions": 37,
+            "deletions": 1,
+            "testFiles": 1,
+            "testAdditions": 27,
+            "productionFiles": 1,
+            "productionAdditions": 10
+          },
+          "candidateTests": {
+            "paths": [
+              "test/health-service.test.ts"
+            ],
+            "patchSha256": "5fe51c5efd80ce486c81808cd051c1ff78da2de797c7e17041e9c0f60a432a85",
+            "additions": 27,
+            "deletions": 0
+          },
+          "mutation": {
+            "killed": 2,
+            "total": 2,
+            "killRate": 1
+          },
+          "protectedTests": {
+            "applicable": true,
+            "intact": true,
+            "paths": [
+              "test/health-service.test.ts"
+            ],
+            "detail": "All protected test hashes match the final snapshot."
+          }
+        }
+      ]
+    }
+  ]
+}

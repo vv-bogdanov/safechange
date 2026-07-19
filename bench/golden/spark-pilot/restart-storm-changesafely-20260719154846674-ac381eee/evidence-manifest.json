@@ -1,0 +1,121 @@
+{
+  "evidenceVersion": 1,
+  "runId": "restart-storm-changesafely-20260719154846674-ac381eee",
+  "files": [
+    {
+      "path": "changesafely/outcome.json",
+      "bytes": 494,
+      "sha256": "65c6f6cf7e3e4eb3221aaba92c2e7e17507221cc1c7ab582490b8c6dc0588b2b"
+    },
+    {
+      "path": "changesafely/run/commands.json",
+      "bytes": 1081,
+      "sha256": "3af14bba75c565720339027d6930741ba874d2385d00f6560056432feac4d172"
+    },
+    {
+      "path": "changesafely/run/contract.json",
+      "bytes": 3842,
+      "sha256": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b"
+    },
+    {
+      "path": "changesafely/run/decision.json",
+      "bytes": 2272,
+      "sha256": "befeaf1e7015841c0215ab779c335b32a95d332ecc8ea520339d8d3211f3a04a"
+    },
+    {
+      "path": "changesafely/run/eligibility.json",
+      "bytes": 1012,
+      "sha256": "776c92ead5cf84aa4f64e356a2a69e20fb14634780347fdf145b0de80bc9a6e2"
+    },
+    {
+      "path": "changesafely/run/evidence.json",
+      "bytes": 5593,
+      "sha256": "5e01356d891edc1a98140bd62a1ef06713fd352997ce8cf8e6b64d7fec1627f4"
+    },
+    {
+      "path": "changesafely/run/harness.json",
+      "bytes": 1565,
+      "sha256": "4d47936c78b96c1fa987a5316aa1c75f2887681bf463fde6d7bce99107d7df86"
+    },
+    {
+      "path": "changesafely/run/implementation.json",
+      "bytes": 1557,
+      "sha256": "77ce6c15b9ce548c0ec99de0c916359076e050ce85026e95faaaae639b77b6cb"
+    },
+    {
+      "path": "changesafely/run/manifest.json",
+      "bytes": 4100,
+      "sha256": "d899fac921c83b0d145c89fbdff8a1618bcc3b60d02781544061c689d6229180"
+    },
+    {
+      "path": "changesafely/run/plans/plan-1.json",
+      "bytes": 7050,
+      "sha256": "2aaeb0178c35f6d45447889fd4c16c91896e2f7ded6ea5bed08d9dd832de3bbb"
+    },
+    {
+      "path": "changesafely/run/plans/plan-2.json",
+      "bytes": 6186,
+      "sha256": "3f5a3ff08765cf939e9f869eca924cf1219204a0e7736715ac2d731e3fbb0ca2"
+    },
+    {
+      "path": "changesafely/run/plans/plan-3.json",
+      "bytes": 6846,
+      "sha256": "1f4a022f992e1d02fb8707e84efc0cec95f55ac5fa29bf841a430f43cc74f293"
+    },
+    {
+      "path": "changesafely/run/report.md",
+      "bytes": 1487,
+      "sha256": "aa560a15079612d848f530279ec98234d85297ddfa102d392daf77d32d667d3c"
+    },
+    {
+      "path": "changesafely/run/state.json",
+      "bytes": 5302,
+      "sha256": "252aec63c9d09d4fff1ac18def8dbf15d63199020d7fb14ce8b769e6643c7952"
+    },
+    {
+      "path": "changesafely/run/trace.jsonl",
+      "bytes": 60783,
+      "sha256": "5eef1388dc7b7313305b34bb92107bc224a7416d4370e4cd140797fad74dd236"
+    },
+    {
+      "path": "changesafely/run/verification-commands.json",
+      "bytes": 1789,
+      "sha256": "2fb653890ddb779f9595eab6b6b02b716a5c5de1f22bae2ba0f27f5455dfa934"
+    },
+    {
+      "path": "changesafely/run/verification.json",
+      "bytes": 1303,
+      "sha256": "5bad6d61c2c09565c12c097a4c716d3294341cac6ccb2445822a2d36f92b5045"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 992,
+      "sha256": "af5012cccc7c0df228a527e7ff0f004245d447a5b70c0d154c1a3f8b7beef70c"
+    },
+    {
+      "path": "diff.patch",
+      "bytes": 1871,
+      "sha256": "bdc160583ed29f77908c55907b42d04d946a2994bfe36e420204efeae0f05c79"
+    },
+    {
+      "path": "evaluation.json",
+      "bytes": 1707,
+      "sha256": "9c07d7b6b94542b971bc53603348fbf290257ecbe9ba92b3677d18efe1c8328e"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 60783,
+      "sha256": "5eef1388dc7b7313305b34bb92107bc224a7416d4370e4cd140797fad74dd236"
+    },
+    {
+      "path": "run.json",
+      "bytes": 1489,
+      "sha256": "1770ed0890cee7b7cd748d136ae4b9d048461da4cdd665bd3c5b2ddd96f6019c"
+    },
+    {
+      "path": "worker.json",
+      "bytes": 460,
+      "sha256": "3118fb3608abf66fa80870081dd589215a0e2302eeb9981e261b5fc8de9e207f"
+    }
+  ]
+}

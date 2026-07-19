@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "judge",
+    "createdAt": "2026-07-19T15:34:18.138Z",
+    "inputs": {
+      "contract": "8db47bdd5c8722da4377a69f2a17374cb20ad11698821f34bf2cd10767dafed4",
+      "eligibility": "e2bb2d423a8d72603792469009986a94f30a4b8893273dc985898a704cd3934f"
+    }
+  },
+  "payload": {
+    "winnerPlanId": "plan-1",
+    "reason": "plan-1 is the simplest admissible option because it limits work to the exact two required files, directly injects the cache-first/read-through flow, and does not add any extra non-required process beyond what the contract already mandates.",
+    "rejectedPlans": [
+      {
+        "planId": "plan-2",
+        "reason": "Although valid, it is more verbose than necessary (extra explicit build step and additional test-structure steps) while not reducing implementation risk or improving acceptance coverage."
+      },
+      {
+        "planId": "plan-3",
+        "reason": "Also valid but similarly broader in test and verification framing, making it more process-heavy than needed for the same acceptance targets."
+      }
+    ],
+    "tradeoffs": [
+      "plan-1 keeps the smallest change surface but may leave cache-failure behavior to inference rather than a fully explicit policy in test design.",
+      "plan-1’s approach is implementation-focused and should be faster to execute and reason about under the scope limit.",
+      "All plans meet contract constraints, so the tradeoff is mainly simplicity and scope breadth, where plan-1 is clearly leanest."
+    ],
+    "residualRisks": [
+      "If cache keying is implemented incorrectly, tenant isolation can regress despite test intent.",
+      "Version-check logic could still be malformed and accidentally treat stale snapshots as fresh.",
+      "Cache miss/hit control flow may inadvertently change backend call patterns for error cases unless test instrumentation is precise."
+    ],
+    "humanDecisionRequired": false,
+    "humanDecisionReason": "No additional human approval is required to choose the winning plan; plan-1 is admissible and directly satisfies the contract within constraints."
+  }
+}

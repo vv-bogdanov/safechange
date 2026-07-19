@@ -57,6 +57,10 @@ The retained local comparison IDs are:
 - Tenant Leak: `comparison-4b088e3edba1a8eb`;
 - Restart Storm: `comparison-a205cff3cb89a343`.
 
+The complete Tenant Leak and Restart Storm pairs are published under
+[`golden/spark-pilot`](golden/spark-pilot/README.md). Double Charge is retained only
+locally because it predates the runner fix and is not current-product golden evidence.
+
 ## Reproduce
 
 Run all deterministic gates without a model:
@@ -80,6 +84,8 @@ Replay retained local evidence without a model:
 npm run benchmark -- replay --run <run-id>
 ```
 
+Replay published Spark evidence by adding `--results bench/golden/spark-pilot`.
+
 ## Limitations
 
 - This is a custom three-scenario pilot, not a statistically significant benchmark.
@@ -87,5 +93,5 @@ npm run benchmark -- replay --run <run-id>
 - There is one attempt per mode and scenario, so model variance is not estimated.
 - Double Charge predates a runner fix and is not a current-product measurement.
 - Wall time and token usage reflect one machine and one runtime version.
-- Selected golden evidence remains unpublished until fresh final runs are explicitly
-  authorized, hash-verified, and secret-scanned.
+- The published golden set contains development Spark evidence only. Fresh final
+  evidence still requires explicit authorization, hash verification, and secret scan.

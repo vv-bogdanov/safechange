@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "scenario": "restart-storm",
+  "checks": [
+    {
+      "id": "visible-checks",
+      "category": "visible",
+      "passed": true,
+      "detail": "npm test passed"
+    },
+    {
+      "id": "database-outage-readiness",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "recovery-without-restart",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "database-errors",
+      "category": "acceptance",
+      "passed": false,
+      "detail": "database health check failed"
+    },
+    {
+      "id": "liveness-preservation",
+      "category": "preservation",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "startup-preservation",
+      "category": "preservation",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "stopped-process",
+      "category": "preservation",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "deployment-parameters",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "no-destructive-apply",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "public-api",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "production-dependencies",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "forbidden-files",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    }
+  ],
+  "summary": {
+    "visible": true,
+    "acceptance": false,
+    "preservation": true,
+    "scope": true
+  },
+  "passed": false
+}

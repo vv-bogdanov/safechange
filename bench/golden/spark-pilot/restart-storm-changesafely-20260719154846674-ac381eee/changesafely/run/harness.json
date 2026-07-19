@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "test-author",
+    "createdAt": "2026-07-19T15:48:19.628Z",
+    "inputs": {
+      "contract": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b",
+      "decision": "befeaf1e7015841c0215ab779c335b32a95d332ecc8ea520339d8d3211f3a04a",
+      "plan-2": "3f5a3ff08765cf939e9f869eca924cf1219204a0e7736715ac2d731e3fbb0ca2"
+    }
+  },
+  "payload": {
+    "summary": "Added DB-focused readiness tests in the health service test suite to enforce gating on database availability before implementation.",
+    "testPaths": [
+      "test/health-service.test.ts"
+    ],
+    "fixturePaths": [],
+    "targetedCommand": {
+      "name": "Full test script execution",
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "purpose": "Run the repository's canonical test entrypoint to validate the readiness-gating harness, which should fail until production code is updated."
+    },
+    "expectedBaselineOutcome": "fail",
+    "expectedFailure": "HealthService currently reports readiness true whenever the process is running, so DB-unavailable/rejecting paths are not reflected in readiness.",
+    "protectedPaths": [
+      "test/health-service.test.ts"
+    ],
+    "protectedHashes": {
+      "test/health-service.test.ts": "cd470a54c59222edf3160a821abb14642141a291967319ccb2befb819a1d3305"
+    },
+    "testCommit": "edaf7a1ce899805c901b18ef6f73abaccb331e7f"
+  }
+}

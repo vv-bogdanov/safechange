@@ -1,0 +1,41 @@
+{
+  "evidenceVersion": 1,
+  "runId": "restart-storm-direct-20260719154714179-ec0b7c86",
+  "files": [
+    {
+      "path": "comparison.json",
+      "bytes": 992,
+      "sha256": "af5012cccc7c0df228a527e7ff0f004245d447a5b70c0d154c1a3f8b7beef70c"
+    },
+    {
+      "path": "diff.patch",
+      "bytes": 1225,
+      "sha256": "7ca0e4b7e3bd45795e53d9cf103af3178d02c2f689f071507151430b37abddcd"
+    },
+    {
+      "path": "direct/final-message.txt",
+      "bytes": 535,
+      "sha256": "b99310dfa9a72de31ed954bc111239b0b2b51cf2f0048a8122e970696ee65999"
+    },
+    {
+      "path": "evaluation.json",
+      "bytes": 1732,
+      "sha256": "b4d536c661115132bfe400ed45d161547c8ae525ba13aef613f1eb394c883a6d"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 4914,
+      "sha256": "9a4df66d483116aaba305bd3c71eea91c208e3862feeff8cc58daa09f0b19b5e"
+    },
+    {
+      "path": "run.json",
+      "bytes": 1474,
+      "sha256": "9570a13c4f4762f09b669aba6bc472a8960c0427dfb7030b38e758a538e976fd"
+    },
+    {
+      "path": "worker.json",
+      "bytes": 461,
+      "sha256": "22ed59978d83fd449f8fdf91e6e8ee3b37557fc45621d61176244dde31f004b7"
+    }
+  ]
+}

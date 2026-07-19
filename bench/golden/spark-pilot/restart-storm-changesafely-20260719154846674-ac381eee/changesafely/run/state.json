@@ -1,0 +1,116 @@
+{
+  "stateVersion": 1,
+  "producerVersion": "0.1.0",
+  "runId": "2026-07-19T15-47-21-603Z-35786606",
+  "task": "Stop routing traffic to the service while its database is unavailable.\n",
+  "repoPath": "/home/dev/.changesafely-benchmark-attempt-bc5wrB/workspace",
+  "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+  "baselineFingerprint": "165d58c4cb664bf667a04a5878463d2d6b0b8b6d2ed8e8097e86ffbeeee36f4a",
+  "baselineProtectedConfiguration": {},
+  "phase": "verified",
+  "status": "VERIFIED",
+  "reason": "The diff updates readiness to include `DatabaseHealth.isAvailable()` with rejection-to-false handling, adds focused readiness tests for DB-unavailable/available/error scenarios, and keeps liveness/startup behavior unchanged while successfully passing `npm run build` and `npm test` at the final state.",
+  "nextAction": "Review the ChangeSafely branch and merge it through the normal repository process.",
+  "artifacts": {
+    "evidence": "5e01356d891edc1a98140bd62a1ef06713fd352997ce8cf8e6b64d7fec1627f4",
+    "contract": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b",
+    "plan-1": "2aaeb0178c35f6d45447889fd4c16c91896e2f7ded6ea5bed08d9dd832de3bbb",
+    "plan-2": "3f5a3ff08765cf939e9f869eca924cf1219204a0e7736715ac2d731e3fbb0ca2",
+    "plan-3": "1f4a022f992e1d02fb8707e84efc0cec95f55ac5fa29bf841a430f43cc74f293",
+    "eligibility": "776c92ead5cf84aa4f64e356a2a69e20fb14634780347fdf145b0de80bc9a6e2",
+    "decision": "befeaf1e7015841c0215ab779c335b32a95d332ecc8ea520339d8d3211f3a04a",
+    "harness": "4d47936c78b96c1fa987a5316aa1c75f2887681bf463fde6d7bce99107d7df86",
+    "commands": "3af14bba75c565720339027d6930741ba874d2385d00f6560056432feac4d172",
+    "implementation": "77ce6c15b9ce548c0ec99de0c916359076e050ce85026e95faaaae639b77b6cb",
+    "verificationCommands": "2fb653890ddb779f9595eab6b6b02b716a5c5de1f22bae2ba0f27f5455dfa934",
+    "verification": "5bad6d61c2c09565c12c097a4c716d3294341cac6ccb2445822a2d36f92b5045"
+  },
+  "contexts": [
+    {
+      "role": "discovery",
+      "threadId": "019f7b0f-847d-72d2-800f-9448352172b0",
+      "parentThreadId": null,
+      "checkpointTurnId": null,
+      "turnId": "019f7b0f-8497-75f2-8fa3-1b227d3b305a",
+      "status": "completed"
+    },
+    {
+      "role": "contract",
+      "threadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "parentThreadId": null,
+      "checkpointTurnId": null,
+      "turnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "status": "completed"
+    },
+    {
+      "role": "planner:plan-1",
+      "threadId": "019f7b0f-f4d9-76a3-a7f5-c014736afaef",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b0f-f5ad-7503-8aa7-227d1f1bd7b1",
+      "status": "completed"
+    },
+    {
+      "role": "planner:plan-2",
+      "threadId": "019f7b0f-f517-7ca2-bc07-2f502ba724bc",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b0f-f5af-7702-b59d-ba8fa1cbf286",
+      "status": "completed"
+    },
+    {
+      "role": "planner:plan-3",
+      "threadId": "019f7b0f-f569-7420-a039-8478a99f1627",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b0f-f5b1-79c0-8691-b3c4de103891",
+      "status": "completed"
+    },
+    {
+      "role": "planner-correction:plan-2",
+      "threadId": "019f7b0f-f517-7ca2-bc07-2f502ba724bc",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-f5af-7702-b59d-ba8fa1cbf286",
+      "turnId": "019f7b10-076c-7311-9d2b-13b61b60835f",
+      "status": "completed"
+    },
+    {
+      "role": "judge",
+      "threadId": "019f7b10-1883-7810-ae96-8bf84d3d9eef",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b10-18c1-74a0-a845-736bb26c3d8d",
+      "status": "completed"
+    },
+    {
+      "role": "test-author",
+      "threadId": "019f7b10-2a7b-7de2-a333-85ecad7012ab",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b10-2b15-7491-98e1-92780a349bee",
+      "status": "completed"
+    },
+    {
+      "role": "implementer",
+      "threadId": "019f7b10-651d-79f0-b0d6-8c77bce790f8",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b10-6586-7dd2-b941-451af77a005b",
+      "status": "completed"
+    },
+    {
+      "role": "verifier",
+      "threadId": "019f7b10-b5ee-79a2-ac17-092da7add09f",
+      "parentThreadId": "019f7b0f-db4b-7342-8121-522f9f82af0c",
+      "checkpointTurnId": "019f7b0f-db7c-7d43-bc14-e89d73c9fed8",
+      "turnId": "019f7b10-b632-75c2-b79e-26994f87775e",
+      "status": "completed"
+    }
+  ],
+  "branch": "changesafely/2026-07-19T15-47-21-603Z-35786606",
+  "testCommit": "edaf7a1ce899805c901b18ef6f73abaccb331e7f",
+  "implementationCommit": "fbb92a071b4ed0b6c112897efe8cd54bffaf07dc",
+  "repairCount": 0,
+  "model": "gpt-5.3-codex-spark",
+  "permissionProfile": "changesafely-benchmark"
+}

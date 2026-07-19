@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "planner:plan-3",
+    "createdAt": "2026-07-19T15:48:00.246Z",
+    "inputs": {
+      "contract": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b"
+    }
+  },
+  "payload": {
+    "planId": "plan-3",
+    "lens": "risk-first",
+    "title": "Gate readiness on database availability with minimal behavioral risk",
+    "approach": "Update only readiness logic and its tests, explicitly preserving startup/liveness contracts and verifying behavior through existing build and test scripts.",
+    "rationale": "A risk-first approach limits blast radius by changing one readiness signal, hardening failure handling, and using existing verification gates to prevent regressions.",
+    "acceptanceCoverage": [
+      {
+        "id": "AC-001",
+        "strategy": "Modify `HealthService.readiness()` to require both process readiness and `database.isAvailable()` success before returning true."
+      },
+      {
+        "id": "AC-002",
+        "strategy": "Wrap DB availability checks in guarded async error handling that maps any rejection to false readiness and does not throw from the probe path."
+      },
+      {
+        "id": "AC-003",
+        "strategy": "Leave `liveness()` and `startup()` implementations untouched to preserve external contracts unless a direct dependency on readiness is required by failure semantics."
+      },
+      {
+        "id": "AC-004",
+        "strategy": "Add unit tests in `test/health-service.test.ts` for readiness false on DB unavailability and true when DB is available while process state is running."
+      },
+      {
+        "id": "AC-005",
+        "strategy": "Run and pass both `npm run build` and `npm test` as the repository already defines them."
+      }
+    ],
+    "invariantProtection": [
+      {
+        "id": "PI-001",
+        "strategy": "Keep interface and method signatures in `src/health-service.ts` and related test doubles unchanged so existing callers remain source-compatible."
+      },
+      {
+        "id": "PI-002",
+        "strategy": "Avoid new dependencies and compile with strict typing by using existing TypeScript constructs and interfaces."
+      },
+      {
+        "id": "PI-003",
+        "strategy": "Restrict behavioral changes to readiness gating only and do not alter liveness/startup or unrelated deployment probe configuration."
+      },
+      {
+        "id": "PI-004",
+        "strategy": "Only read `deployment.json` for context unless an explicit approval request arises to edit probe settings."
+      }
+    ],
+    "files": [
+      {
+        "path": "src/health-service.ts",
+        "purpose": "Implement defensive DB-aware readiness logic while preserving process-state compatibility"
+      },
+      {
+        "path": "test/health-service.test.ts",
+        "purpose": "Add/adjust probe tests covering DB available/unavailable and error rejection behavior"
+      },
+      {
+        "path": "deployment.json",
+        "purpose": "Read-only validation of readiness probe target alignment with `/health/ready`"
+      }
+    ],
+    "steps": [
+      {
+        "id": "S1",
+        "description": "Review current implementations in `src/health-service.ts` and `test/health-service.test.ts` to confirm current probe behavior and the mutable DB test double contract.",
+        "paths": [
+          "src/health-service.ts",
+          "test/health-service.test.ts"
+        ]
+      },
+      {
+        "id": "S2",
+        "description": "Implement readiness to short-circuit on process-not-ready before calling DB, then include async DB availability check and map failures to false with explicit error-tolerant handling.",
+        "paths": [
+          "src/health-service.ts"
+        ]
+      },
+      {
+        "id": "S3",
+        "description": "Add tests for false readiness when DB returns false and when DB `isAvailable()` rejects, plus positive path when DB is true and process is ready.",
+        "paths": [
+          "test/health-service.test.ts"
+        ]
+      },
+      {
+        "id": "S4",
+        "description": "Run required validation commands and, only if needed, verify `deployment.json` still points readiness to `/health/ready` without edits.",
+        "paths": [
+          "deployment.json"
+        ]
+      },
+      {
+        "id": "S5",
+        "description": "Document residual risk and rollout guidance if readiness flap or transient DB latency is observed.",
+        "paths": []
+      }
+    ],
+    "safetyTests": [
+      {
+        "name": "Full project test suite",
+        "proves": "AC-004,AC-005,PI-001",
+        "argv": [
+          "npm",
+          "test"
+        ]
+      }
+    ],
+    "verificationCommands": [
+      {
+        "name": "Compile",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "purpose": "Confirm strict TypeScript integrity"
+      },
+      {
+        "name": "Test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Run full test suite including new readiness DB scenarios"
+      }
+    ],
+    "dependencies": [],
+    "migrations": [],
+    "approvalRequiredChanges": [],
+    "risks": [
+      "Readiness may flap during transient DB blips, increasing rolling restart frequency if probe thresholds are too strict.",
+      "Synchronous startup assumptions can fail under prolonged DB outages, potentially delaying rollout while pods wait for readiness recovery.",
+      "Error-path behavior in `isAvailable()` could accidentally mask deeper dependency failures if logging/observability is insufficient."
+    ],
+    "assumptions": [
+      "`/health/ready` is the routing gate the platform uses for pod readiness decisions.",
+      "Process state methods remain stable and do not already encode DB semantics."
+    ],
+    "unknowns": [
+      {
+        "description": "Whether readiness failures on `/health/ready` are strictly enforced by all upstream traffic routers is not verifiable from this repository alone.",
+        "critical": true,
+        "resolution": "Validate in staging/infrastructure runbook after rollout against actual ingress/service-mesh behavior."
+      },
+      {
+        "description": "Whether there is additional routing logic outside this repo that overrides readiness signaling cannot be confirmed in this code surface.",
+        "critical": true,
+        "resolution": "Inspect deployment pipeline and platform config for any external traffic-gating overrides before wider rollout."
+      }
+    ],
+    "recovery": [
+      "Revert only `src/health-service.ts` and `test/health-service.test.ts` changes if readiness impact exceeds acceptance thresholds and redeploy with prior test/build behavior."
+    ],
+    "rejectionReasons": []
+  }
+}

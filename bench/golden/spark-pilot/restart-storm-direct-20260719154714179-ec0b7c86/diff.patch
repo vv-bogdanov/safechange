@@ -1,0 +1,32 @@
+diff --git a/src/health-service.ts b/src/health-service.ts
+index ddd4eaf..650fbd4 100644
+--- a/src/health-service.ts
++++ b/src/health-service.ts
+@@ -18,7 +18,7 @@ export class HealthService {
+   }
+ 
+   async readiness(): Promise<boolean> {
+-    return this.processState.running;
++    return this.processState.running && (await this.database.isAvailable());
+   }
+ 
+   async startup(): Promise<boolean> {
+diff --git a/test/health-service.test.ts b/test/health-service.test.ts
+index ec16894..5f0826c 100644
+--- a/test/health-service.test.ts
++++ b/test/health-service.test.ts
+@@ -26,6 +26,14 @@ test("removes a stopped process from health", async () => {
+   assert.equal(await service.startup(), false);
+ });
+ 
++test("marks readiness as unavailable when database is unavailable", async () => {
++  const database = new MutableDatabase();
++  database.available = false;
++  const service = new HealthService(database, { running: true, started: true });
++
++  assert.equal(await service.readiness(), false);
++});
++
+ test("tracks startup independently for a live process", async () => {
+   const processState: ProcessState = { running: true, started: false };
+   const service = new HealthService(new MutableDatabase(), processState);

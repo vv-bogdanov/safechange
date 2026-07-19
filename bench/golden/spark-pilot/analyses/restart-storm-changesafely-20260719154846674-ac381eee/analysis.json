@@ -1,0 +1,58 @@
+{
+  "analysisVersion": 1,
+  "runId": "restart-storm-changesafely-20260719154846674-ac381eee",
+  "evidenceManifestSha256": "eddebb37ce7416cf3ce2781b92a31f0f6691a261f124285d3764cc7394be8eb8",
+  "scenario": "restart-storm",
+  "candidateTests": {
+    "paths": [
+      "test/health-service.test.ts"
+    ],
+    "patchSha256": "5fe51c5efd80ce486c81808cd051c1ff78da2de797c7e17041e9c0f60a432a85",
+    "additions": 27,
+    "deletions": 0
+  },
+  "reference": {
+    "passed": true,
+    "process": {
+      "started": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false
+    }
+  },
+  "mutants": [
+    {
+      "id": "database-in-liveness",
+      "killed": true,
+      "process": {
+        "started": true,
+        "exitCode": 1,
+        "signal": null,
+        "timedOut": false
+      }
+    },
+    {
+      "id": "shared-database-probe",
+      "killed": true,
+      "process": {
+        "started": true,
+        "exitCode": 1,
+        "signal": null,
+        "timedOut": false
+      }
+    }
+  ],
+  "mutation": {
+    "killed": 2,
+    "total": 2,
+    "killRate": 1
+  },
+  "protectedTests": {
+    "applicable": true,
+    "intact": true,
+    "paths": [
+      "test/health-service.test.ts"
+    ],
+    "detail": "All protected test hashes match the final snapshot."
+  }
+}

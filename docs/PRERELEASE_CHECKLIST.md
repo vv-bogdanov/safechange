@@ -23,8 +23,8 @@ publishing the first public prerelease.
   reference, mutant, evaluator, scope rule, evidence hash, replay, and report without
   a model call.
 - [ ] Only after a separate explicit authorization, run fresh final Direct and
-  ChangeSafely comparisons from preregistered manifests. Do not reuse the Spark
-  development pilot as final evidence.
+  ChangeSafely comparisons from preregistered manifests using an explicit
+  `--model <id> --final`. Do not reuse the Spark development pilot as final evidence.
 - [ ] Verify every selected benchmark evidence and analysis manifest, scan the exact
   export for secrets, and regenerate the report before adding golden evidence to Git.
 - [ ] Confirm `npm pack --dry-run` contains no test fixtures, local artifacts,

@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "discovery",
+    "createdAt": "2026-07-19T15:33:43.387Z",
+    "inputs": {}
+  },
+  "payload": {
+    "summary": "Repository is a tiny TypeScript package with a currently uncached authorization service. The only configured non-interactive scripts are `npm run build` and `npm test`, where test chains to a build then Node's built-in test runner. I did not implement changes in this discovery pass.",
+    "facts": [
+      {
+        "id": "F1",
+        "claim": "AGENTS instructions constrain changes: strict TypeScript is expected, `npm test` must be run before completion, no production dependencies should be added, and modifications must be limited to authorization caching and its tests.",
+        "references": [
+          {
+            "path": "AGENTS.md",
+            "detail": "Instruction list includes four bullets: strict TS, run npm test, no production deps, and scope-limited changes."
+          }
+        ]
+      },
+      {
+        "id": "F2",
+        "claim": "Repository scripts are: `build: \"tsc -p tsconfig.json\"` and `test: \"npm run build && node --test dist/test/*.test.js\"` (no separate typecheck script).",
+        "references": [
+          {
+            "path": "package.json",
+            "detail": "`scripts` section defines `build` and `test` exactly as above; no `typecheck` entry exists."
+          }
+        ]
+      },
+      {
+        "id": "F3",
+        "claim": "The service constructor already accepts both backend and cache adapters, but `authorize` currently ignores the cache entirely and always performs both backend calls (`version` and `loadPermissions`) for valid subjects.",
+        "references": [
+          {
+            "path": "src/authorization-service.ts",
+            "detail": "`AuthorizationService` stores `backend` and `cache`; `authorize` calls `backend.version(subject)` and then `backend.loadPermissions(subject)` unconditionally after basic subject validation."
+          }
+        ]
+      },
+      {
+        "id": "F4",
+        "claim": "Cache API shape is `AuthorizationCache.get(key): Promise<AuthorizationSnapshot | undefined>` and `set(key, snapshot): Promise<void>`, with snapshots containing `version` and `permissions`.",
+        "references": [
+          {
+            "path": "src/authorization-service.ts",
+            "detail": "`AuthorizationSnapshot` and `AuthorizationCache` interfaces are declared before `AuthorizationService`."
+          }
+        ]
+      },
+      {
+        "id": "F5",
+        "claim": "Current tests compile and run through Node test directly against built JS (`dist/test/*.test.js`) and primarily validate permission checking and tenant separation, plus invalid subject/backend failure handling.",
+        "references": [
+          {
+            "path": "test/authorization-service.test.ts",
+            "detail": "Three tests: permission allowed/denied, separate tenant lookups, invalid subject + backend error path."
+          }
+        ]
+      },
+      {
+        "id": "F6",
+        "claim": "Current tests do not assert any cache hit/miss behavior, cache set/get calls, stale-version invalidation, or backend-call minimization.",
+        "references": [
+          {
+            "path": "test/authorization-service.test.ts",
+            "detail": "MemoryCache helper is used, but no assertions inspect `entries` or call counts; service behavior being tested never references cache interactions."
+          }
+        ]
+      },
+      {
+        "id": "F7",
+        "claim": "TypeScript is currently `strict` with additional strictness flags (e.g., `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) and compiles `src/**/*.ts` and `test/**/*.ts` into `dist` via `tsconfig.json`.",
+        "references": [
+          {
+            "path": "tsconfig.json",
+            "detail": "Compiler options include `strict: true`, plus strictness flags, and `outDir: \"dist\"`, `include` covering `src` and `test`."
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "name": "npm test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Project test command; runs build then `node --test dist/test/*.test.js` via script."
+      },
+      {
+        "name": "npm run build",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "purpose": "TypeScript build/typecheck command used by test script (`tsc -p tsconfig.json`)."
+      }
+    ],
+    "testGaps": [
+      "No `typecheck` script is defined in package.json, so there is no explicit non-interactive typecheck-only npm script.",
+      "Current tests do not cover cache behavior at all; introducing caching requires adding dedicated cache-focused tests."
+    ],
+    "constraints": [
+      "Keep changes limited to authorization caching and its tests.",
+      "Do not alter public API (from AGENTS).",
+      "Do not add production dependencies.",
+      "Ensure command outcome is verified with `npm test` per AGENTS before claiming completion."
+    ],
+    "assumptions": [
+      "Repository root for commands and references is `/home/dev/.changesafely-benchmark-attempt-AgYU4L/workspace`.",
+      "No environment variables or build tooling outside package scripts are needed to interpret current command behavior."
+    ],
+    "unknowns": [
+      "Whether cache should be keyed by full subject, include permission, or another strategy are not defined in current code/tests.",
+      "No expected policy for stale cache invalidation/TTL/eviction is present in the current repository.",
+      "No requirement exists for cache error handling semantics (propagation vs fallback).",
+      "No explicit backward-compatibility constraints beyond preserving public API are documented for caching behavior transitions."
+    ]
+  }
+}

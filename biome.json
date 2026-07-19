@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!**/dist", "!!src/app-server/generated"]
+    "includes": ["**", "!!**/dist", "!!src/app-server/generated", "!!bench/golden"]
   },
   "formatter": {
     "enabled": true,

@@ -17,6 +17,7 @@ import {
   type StoredComparison,
 } from "./comparison.js";
 import {
+  type BenchmarkMeasurement,
   type BenchmarkMode,
   type BenchmarkOutcome,
   EVIDENCE_VERSION,
@@ -48,6 +49,7 @@ export interface BenchmarkAttemptOptions {
   resultsRoot: string;
   scenario: string;
   mode: BenchmarkMode;
+  measurement?: BenchmarkMeasurement;
   model: string;
   effort: string;
   timeoutMs: number;
@@ -71,7 +73,9 @@ export async function runBenchmarkAttempt(
     const attempt = await materializeAttempt(scenario, join(temporaryRoot, "workspace"));
     const environment = await collectEnvironmentVersions(options.codexCommand);
     const evaluatorSha256 = contentSha256(await readFile(scenario.evaluator));
+    const measurement = options.measurement ?? "development";
     const comparison = await ensureComparisonManifest(options.resultsRoot, {
+      measurement,
       scenario: scenario.id,
       taskText,
       taskSha256: contentSha256(taskText),
@@ -156,6 +160,7 @@ export async function runBenchmarkAttempt(
       comparisonSha256: comparison.sha256,
       scenario: scenario.id,
       mode: options.mode,
+      measurement,
       taskText,
       taskSha256: contentSha256(taskText),
       baselineCommit: snapshot.baselineCommit,

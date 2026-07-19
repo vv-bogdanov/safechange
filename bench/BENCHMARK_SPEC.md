@@ -242,8 +242,9 @@ The pilot defaults are:
 
 Development runs use Spark. Final measured or publishable runs are forbidden until the Spark
 comparisons have completed and been evaluated, and then require a separate explicit user
-command. They are never started by CI, a default script, or completion of an implementation
-phase.
+command with both `--final` and an explicit `--model`. The controller rejects `--final` until a
+paired evaluated Spark comparison exists for the same scenario. Final runs are never started by
+CI, a default script, or completion of an implementation phase.
 
 ### 8.5 Isolation threat model
 
@@ -521,15 +522,17 @@ Provide a minimal automated path that can:
 The development interface is:
 
 ```text
-npm run benchmark -- run --scenario double-charge --mode direct|changesafely --model <id>
+npm run benchmark -- run --scenario double-charge --mode direct|changesafely [--model gpt-5.3-codex-spark]
 npm run benchmark -- validate --scenario double-charge
 npm run benchmark -- evaluate --run <run-id>
 npm run benchmark -- replay --run <run-id>
 npm run benchmark -- report [--results <path>]
 ```
 
-The live `run` command requires an explicit model. Spark is used for development. There is no
-command that implicitly starts a final measured run.
+The development `run` command defaults to Spark and accepts only Spark. After separate user
+authorization, a final run requires both `--model <id>` and `--final`; it also requires an
+evaluated paired Spark comparison for that scenario. No command implicitly starts a final
+measured run.
 
 The exact CLI and internal structure are left to the coding agent. Do not build a separate platform.
 

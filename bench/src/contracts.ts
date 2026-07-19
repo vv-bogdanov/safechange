@@ -6,6 +6,7 @@ export const COMPARISON_VERSION = 1;
 export const ANALYSIS_VERSION = 1;
 
 export type BenchmarkMode = "changesafely" | "direct";
+export type BenchmarkMeasurement = "development" | "final";
 export type BenchmarkOutcome =
   | "safe_success"
   | "unsafe_green"
@@ -29,6 +30,7 @@ export interface RunDocument {
   comparisonSha256: string;
   scenario: string;
   mode: BenchmarkMode;
+  measurement?: BenchmarkMeasurement;
   taskText: string;
   taskSha256: string;
   baselineCommit: string;
@@ -64,6 +66,7 @@ export interface ComparisonManifest {
   comparisonVersion: typeof COMPARISON_VERSION;
   comparisonId: string;
   createdAt: string;
+  measurement?: BenchmarkMeasurement;
   scenario: string;
   taskText: string;
   taskSha256: string;
@@ -202,6 +205,7 @@ const runDocumentSchema = Type.Object(
     comparisonSha256: sha256,
     scenario: Type.String({ minLength: 1, maxLength: 100 }),
     mode: Type.Union([Type.Literal("changesafely"), Type.Literal("direct")]),
+    measurement: Type.Optional(Type.Union([Type.Literal("development"), Type.Literal("final")])),
     taskText: Type.String({ minLength: 1, maxLength: 20_000 }),
     taskSha256: sha256,
     baselineCommit: commit,
@@ -245,6 +249,7 @@ const comparisonManifestSchema = Type.Object(
     comparisonVersion: Type.Literal(COMPARISON_VERSION),
     comparisonId: Type.String({ pattern: "^comparison-[a-f0-9]{16}$" }),
     createdAt: timestamp,
+    measurement: Type.Optional(Type.Union([Type.Literal("development"), Type.Literal("final")])),
     scenario: Type.String({ minLength: 1, maxLength: 100 }),
     taskText: Type.String({ minLength: 1, maxLength: 20_000 }),
     taskSha256: sha256,

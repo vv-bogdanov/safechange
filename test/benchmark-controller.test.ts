@@ -192,7 +192,7 @@ test("classifies incomplete worker evidence as technical failure", () => {
   );
 });
 
-test("benchmark CLI refuses final-model runs before explicit authorization", async () => {
+test("benchmark CLI requires an explicit final flag and an evaluated Spark pair", async (t) => {
   await assert.rejects(
     execFileAsync(
       process.execPath,
@@ -213,7 +213,63 @@ test("benchmark CLI refuses final-model runs before explicit authorization", asy
         typeof error === "object" && error !== null && "stderr" in error
           ? String(error.stderr)
           : "";
-      assert.match(stderr, /Final measurements require a separate explicit user command/u);
+      assert.match(stderr, /Use an explicit --final command only after Spark evaluation/u);
+      return true;
+    },
+  );
+
+  const resultsRoot = await mkdtemp(join(tmpdir(), "changesafely-final-gate-"));
+  t.after(async () => rm(resultsRoot, { recursive: true, force: true }));
+  await assert.rejects(
+    execFileAsync(
+      process.execPath,
+      [
+        join(projectRoot, "dist/bench/src/cli.js"),
+        "run",
+        "--scenario",
+        "double-charge",
+        "--mode",
+        "direct",
+        "--final",
+        "--results",
+        resultsRoot,
+      ],
+      { timeout: 10_000 },
+    ),
+    (error: unknown) => {
+      const stderr =
+        typeof error === "object" && error !== null && "stderr" in error
+          ? String(error.stderr)
+          : "";
+      assert.match(stderr, /--model is required with --final/u);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    execFileAsync(
+      process.execPath,
+      [
+        join(projectRoot, "dist/bench/src/cli.js"),
+        "run",
+        "--scenario",
+        "double-charge",
+        "--mode",
+        "direct",
+        "--model",
+        "gpt-5.6-codex",
+        "--final",
+        "--results",
+        resultsRoot,
+      ],
+      { timeout: 10_000 },
+    ),
+    (error: unknown) => {
+      const stderr =
+        typeof error === "object" && error !== null && "stderr" in error
+          ? String(error.stderr)
+          : "";
+      assert.match(stderr, /requires an evaluated paired .* comparison/u);
       return true;
     },
   );

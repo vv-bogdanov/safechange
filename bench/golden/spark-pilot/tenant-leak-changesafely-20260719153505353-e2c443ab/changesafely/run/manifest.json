@@ -1,0 +1,114 @@
+{
+  "manifestVersion": 1,
+  "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+  "changesafelyVersion": "0.1.0",
+  "nodeVersion": "v24.15.0",
+  "gitVersion": "git version 2.53.0",
+  "codexVersion": "codex-cli 0.144.6",
+  "appServerUserAgent": "changesafely/0.144.6 (Ubuntu 26.4.0; x86_64) tmux-256color (changesafely; 0.1.0)",
+  "platform": "linux",
+  "platformRelease": "7.0.0-28-generic",
+  "architecture": "x64",
+  "model": "gpt-5.3-codex-spark",
+  "startedAt": "2026-07-19T15:33:22.113Z",
+  "completedAt": "2026-07-19T15:35:05.041Z",
+  "resumeCount": 0,
+  "roles": [
+    {
+      "role": "discovery",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "65ca8be54c38cf3be58ed06bcfc7b58cf110ae611f29017ae3c85d5a92467df6",
+      "outputSchemaSha256": "da036a42ef6474a34d9f088c3f20a1c0b26969e29536d6606cfd34f02b0eae26"
+    },
+    {
+      "role": "contract",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "ad6ae1f4b601d73fa2c649ffd5d0b455df8335defd91c7cfa46d2262debf613b",
+      "outputSchemaSha256": "5bbc1a9577fdb757bb6a90fb3de6408fcc402bc0037d7d4ea224047425e1c244"
+    },
+    {
+      "role": "planner:plan-1",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "803b8bf7a76b92458231e43484bae419df9fbb05e9764a85223cf99d6756a2e2",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner:plan-2",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "6f49591ce9379b69af52096e8e630b07ffb75333c080b3c3d2ee32ce0849e99c",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner:plan-3",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "2c4a8201e0b2c6a0b3c7e88b81287cbd1ff900c58b11cf1c9a583e49a836b786",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner-correction:plan-1",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "1cbb74539d7b9a1519e3f1e7720bc48695eed43fa9e3a10de71cc59d3f79154b",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner-correction:plan-2",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "182876df4a3218dcea8c46d586b1fbd005c9d7619645e59355e532a9ff2ab995",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "planner-correction:plan-3",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "9eb8950dc357ceb8b5e2346e8e593bf38bc5207db416c028209e567a04eef5f9",
+      "outputSchemaSha256": "d33c14a96d7c8659dbe81394e1a6b1436aed627e47fe6324ea9031b6c05dd354"
+    },
+    {
+      "role": "judge",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "956f10986c9610264c34dab5cd4343d3c0c492280b6da7da1b0137b67872af2e",
+      "outputSchemaSha256": "fd84281e0b3fc7a3c5ea1c412ede9fad6a5f679678d0b7580edcbf4e26068a7e"
+    },
+    {
+      "role": "test-author",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "19cdf4a4e912b591be5cf4131b97fbf2adb902b0e53a6caa66e129b7ac996960",
+      "outputSchemaSha256": "4a1a3b76c95bb737a5fe3522611801c90670a81537a7a13110a309713136d906"
+    },
+    {
+      "role": "implementer",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "38c2e9b0ee98a7079cef228e14e1b1d3ae43a8a7c0a6e19cf5399b1ea331c70d",
+      "outputSchemaSha256": "48d506a56e84c90f93fa065d45e8ee27b9f8727f798b4ce9fb303a12d908777d"
+    },
+    {
+      "role": "verifier",
+      "model": "gpt-5.3-codex-spark",
+      "effort": "medium",
+      "sandboxPolicy": "permissions:changesafely-benchmark",
+      "promptSha256": "d93d9d7823695d522476bb65ef8f35ea5dee61e8545badc3baa439d10448b284",
+      "outputSchemaSha256": "1c9620d5cd1e30d2afb6546d6a82e31300125add255c4f63b0f6748b550fb865"
+    }
+  ]
+}

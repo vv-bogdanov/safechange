@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "scenario": "tenant-leak",
+  "checks": [
+    {
+      "id": "visible-checks",
+      "category": "visible",
+      "passed": true,
+      "detail": "npm test passed"
+    },
+    {
+      "id": "cache-reuse",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "tenant-isolation",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "cross-instance-isolation",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "revocation",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "deny-default",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "backend-errors",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "cache-errors",
+      "category": "acceptance",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "permission-boundary",
+      "category": "preservation",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "public-api",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "production-dependencies",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    },
+    {
+      "id": "forbidden-files",
+      "category": "scope",
+      "passed": true,
+      "detail": "passed"
+    }
+  ],
+  "summary": {
+    "visible": true,
+    "acceptance": true,
+    "preservation": true,
+    "scope": true
+  },
+  "passed": true
+}

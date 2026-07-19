@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "verifier",
+    "createdAt": "2026-07-19T15:35:04.966Z",
+    "inputs": {
+      "implementation": "95962789f63370c4ab0b49bd875dfca09752d85148b54e0ec168e8a2163b5023",
+      "verificationCommands": "c52b35c610f617a03146e42aaf2122f2a27197365bae99f412c6d50e5d6b1056"
+    }
+  },
+  "payload": {
+    "verdict": "accept",
+    "contractFulfilled": true,
+    "invariantsPreserved": true,
+    "scopeConformant": true,
+    "evidenceSufficient": true,
+    "reason": "The implementation updates `AuthorizationService.authorize` with a read-through cache flow and adds focused cache-behavior tests in the two permitted files, while final required `npm test` passes.",
+    "findings": [],
+    "residualRisks": [
+      "`cache.get`/`cache.set` failures are currently treated as authorization failures via the broad catch, which may change behavior versus a backend-fallback policy if cache transport errors occur.",
+      "Backend is still called for `version(...)` on every authorize request, so savings are limited to `loadPermissions` calls rather than full request skipping."
+    ]
+  }
+}

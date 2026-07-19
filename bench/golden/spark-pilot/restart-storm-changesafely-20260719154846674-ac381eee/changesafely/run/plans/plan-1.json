@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "planner:plan-1",
+    "createdAt": "2026-07-19T15:48:00.242Z",
+    "inputs": {
+      "contract": "df9961d069a5ba3de892063bee789b765885a378742c7f5acfc8c46370414f9b"
+    }
+  },
+  "payload": {
+    "planId": "plan-1",
+    "lens": "minimal-change",
+    "title": "Add database-aware readiness check with minimal targeted code and test edits",
+    "approach": "Patch only `HealthService.readiness()` and extend its unit tests, then validate via the existing npm build and test commands without touching deployment behavior.",
+    "rationale": "This confines change impact to routing-relevant readiness logic, preserving all public contracts while preventing traffic from reaching DB-unhealthy pods.",
+    "acceptanceCoverage": [
+      {
+        "id": "AC-001",
+        "strategy": "Change readiness to require both `this.processState.running` and `await this.db.isAvailable()` and leave the method signature unchanged."
+      },
+      {
+        "id": "AC-002",
+        "strategy": "Catch rejections from `isAvailable()` in readiness and return `false` deterministically on any error."
+      },
+      {
+        "id": "AC-003",
+        "strategy": "Do not modify `liveness` or `startup` method signatures and only alter behavior if strictly necessary to satisfy DB-gated readiness."
+      },
+      {
+        "id": "AC-004",
+        "strategy": "Add focused tests in `test/health-service.test.ts` covering readiness false when DB is unavailable and true when DB is available while process state is running."
+      },
+      {
+        "id": "AC-005",
+        "strategy": "Validate `npm run build` and `npm test` pass after the change to confirm strict TypeScript compile and test expectations still hold."
+      }
+    ],
+    "invariantProtection": [
+      {
+        "id": "PI-001",
+        "strategy": "Keep `HealthService` and `DatabaseHealth` public types and method contracts intact so existing callers compile without source-level compatibility changes."
+      },
+      {
+        "id": "PI-002",
+        "strategy": "Do not add any production dependencies and keep changes compatible with strict TypeScript settings in `tsconfig.json`."
+      },
+      {
+        "id": "PI-003",
+        "strategy": "Restrict behavior change to readiness readiness semantics only, leaving startup/liveness contracts and non-health-routing behavior untouched."
+      },
+      {
+        "id": "PI-004",
+        "strategy": "Avoid editing `deployment.json`; if probe configuration is considered for later, do so only with explicit approval."
+      }
+    ],
+    "files": [
+      {
+        "path": "src/health-service.ts",
+        "purpose": "Implement minimal readiness gating using database availability while preserving the existing API."
+      },
+      {
+        "path": "test/health-service.test.ts",
+        "purpose": "Add deterministic tests for DB-available and DB-unavailable readiness behavior."
+      },
+      {
+        "path": "package.json",
+        "purpose": "Use existing `build` and `test` scripts as-is for validation entry points."
+      },
+      {
+        "path": "deployment.json",
+        "purpose": "Read for verification only to confirm readiness is the routing-relevant probe."
+      }
+    ],
+    "steps": [
+      {
+        "id": "S-01",
+        "description": "Review current health service readiness, startup, and liveness implementations and confirm where database availability is currently unused.",
+        "paths": [
+          "src/health-service.ts",
+          "test/health-service.test.ts"
+        ]
+      },
+      {
+        "id": "S-02",
+        "description": "Update `HealthService.readiness()` to await `database.isAvailable()` only for readiness and return false on errors while preserving method signature.",
+        "paths": [
+          "src/health-service.ts"
+        ]
+      },
+      {
+        "id": "S-03",
+        "description": "Extend readiness tests with explicit DB-unavailable and DB-error cases and keep existing liveness/startup tests intact.",
+        "paths": [
+          "test/health-service.test.ts"
+        ]
+      },
+      {
+        "id": "S-04",
+        "description": "Run non-interactive build and test verification commands and report pass/fail with any adjustment needed to keep strict mode satisfied.",
+        "paths": [
+          "package.json"
+        ]
+      }
+    ],
+    "safetyTests": [
+      {
+        "name": "npm test",
+        "proves": "AC-001, AC-002, AC-004, AC-005",
+        "argv": [
+          "npm",
+          "test"
+        ]
+      },
+      {
+        "name": "npm run test",
+        "proves": "AC-001, AC-004",
+        "argv": [
+          "npm",
+          "run",
+          "test"
+        ]
+      }
+    ],
+    "verificationCommands": [
+      {
+        "name": "npm run build",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "purpose": "Validate strict TypeScript compilation after readiness logic changes."
+      },
+      {
+        "name": "npm test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Execute full repository test suite including health-service unit coverage."
+      }
+    ],
+    "dependencies": [],
+    "migrations": [],
+    "approvalRequiredChanges": [],
+    "risks": [
+      "Readiness may flap under slow or intermittently failing DB health checks unless probe timing and retry behavior are already appropriate for the environment.",
+      "Adding DB dependency to readiness may reduce observed availability during short transient DB failures if readiness thresholds are too strict."
+    ],
+    "assumptions": [
+      "Readiness probe outcomes in `deployment.json` are treated as the primary traffic-gating signal for routing.",
+      "`DatabaseHealth.isAvailable()` is safe and inexpensive enough for readiness invocations and can fail fast when DB is unavailable."
+    ],
+    "unknowns": [
+      {
+        "description": "Whether upstream infrastructure exclusively relies on Kubernetes readiness and ignores other routing paths remains unverified in-repo.",
+        "critical": false,
+        "resolution": "Keep the change limited to readiness and confirm with platform ownership after implementation."
+      },
+      {
+        "description": "Any service-mesh or gateway-level health logic outside this repository could override readiness behavior for traffic decisions.",
+        "critical": false,
+        "resolution": "Coordinate with deployment/infrastructure stakeholders if routing still occurs during DB downtime."
+      }
+    ],
+    "recovery": [
+      "If tests fail, revert readiness changes to process-only logic and reintroduce DB gating with stricter, deterministic mocking or defensive error handling.",
+      "If build fails, revert or isolate strictness violations in `src/health-service.ts` only, then re-run `npm run build` and `npm test`."
+    ],
+    "rejectionReasons": []
+  }
+}

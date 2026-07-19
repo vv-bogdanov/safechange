@@ -1,0 +1,57 @@
+diff --git a/src/health-service.ts b/src/health-service.ts
+index ddd4eaf..371b7c1 100644
+--- a/src/health-service.ts
++++ b/src/health-service.ts
+@@ -18,7 +18,16 @@ export class HealthService {
+   }
+ 
+   async readiness(): Promise<boolean> {
+-    return this.processState.running;
++    if (!this.processState.running) {
++      return false;
++    }
++
++    try {
++      const isDatabaseAvailable = await this.database.isAvailable();
++      return isDatabaseAvailable;
++    } catch {
++      return false;
++    }
+   }
+ 
+   async startup(): Promise<boolean> {
+diff --git a/test/health-service.test.ts b/test/health-service.test.ts
+index ec16894..8c387f6 100644
+--- a/test/health-service.test.ts
++++ b/test/health-service.test.ts
+@@ -34,3 +34,30 @@ test("tracks startup independently for a live process", async () => {
+   processState.started = true;
+   assert.equal(await service.startup(), true);
+ });
++
++test("reports not ready when the database is unavailable", async () => {
++  const service = new HealthService({ isAvailable: async () => false }, { running: true, started: true });
++
++  assert.equal(await service.liveness(), true);
++  assert.equal(await service.readiness(), false);
++  assert.equal(await service.startup(), true);
++});
++
++test("reports not ready when database availability check fails", async () => {
++  const service = new HealthService(
++    { isAvailable: async () => {
++      throw new Error("database down");
++    } },
++    { running: true, started: true },
++  );
++
++  assert.equal(await service.readiness(), false);
++});
++
++test("reports ready when database is available", async () => {
++  const service = new HealthService({ isAvailable: async () => true }, { running: true, started: true });
++
++  assert.equal(await service.liveness(), true);
++  assert.equal(await service.readiness(), true);
++  assert.equal(await service.startup(), true);
++});

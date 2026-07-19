@@ -1,0 +1,121 @@
+{
+  "evidenceVersion": 1,
+  "runId": "tenant-leak-changesafely-20260719153505353-e2c443ab",
+  "files": [
+    {
+      "path": "changesafely/outcome.json",
+      "bytes": 389,
+      "sha256": "d801ff8cbb3209c5702a64401d6260fac9c2a20a88be23665d04a8cbffa3f73e"
+    },
+    {
+      "path": "changesafely/run/commands.json",
+      "bytes": 1081,
+      "sha256": "945d7c398417f72f5cd4ead5ca692257d71679ff09ce8ebf31d85f21fffa63dd"
+    },
+    {
+      "path": "changesafely/run/contract.json",
+      "bytes": 5200,
+      "sha256": "8db47bdd5c8722da4377a69f2a17374cb20ad11698821f34bf2cd10767dafed4"
+    },
+    {
+      "path": "changesafely/run/decision.json",
+      "bytes": 2275,
+      "sha256": "5ad7c09d701f72a2fb4541eaf039839e055e977889bc649620132147050677d2"
+    },
+    {
+      "path": "changesafely/run/eligibility.json",
+      "bytes": 1012,
+      "sha256": "e2bb2d423a8d72603792469009986a94f30a4b8893273dc985898a704cd3934f"
+    },
+    {
+      "path": "changesafely/run/evidence.json",
+      "bytes": 5944,
+      "sha256": "d3655d0b866398ba8f65c5ba426c240d4a42f2826f8de1f6224f7da4076f6c7f"
+    },
+    {
+      "path": "changesafely/run/harness.json",
+      "bytes": 1710,
+      "sha256": "9927d6d283c8608da0128664a683a70b735d339f66baca86e50ad5c351650977"
+    },
+    {
+      "path": "changesafely/run/implementation.json",
+      "bytes": 2040,
+      "sha256": "95962789f63370c4ab0b49bd875dfca09752d85148b54e0ec168e8a2163b5023"
+    },
+    {
+      "path": "changesafely/run/manifest.json",
+      "bytes": 4832,
+      "sha256": "a312080f7286b3050da7d714de8dc056a04acadd222e4f5c871fcadff15a30a4"
+    },
+    {
+      "path": "changesafely/run/plans/plan-1.json",
+      "bytes": 7353,
+      "sha256": "091caf05f379051f2d8f2e428a6da5fdc669fc88f133063ec09a5f72ab0a495f"
+    },
+    {
+      "path": "changesafely/run/plans/plan-2.json",
+      "bytes": 8220,
+      "sha256": "02078b88d5656980e18489e97bc7fd9b922b68faef252b54cf08294cc33f5eba"
+    },
+    {
+      "path": "changesafely/run/plans/plan-3.json",
+      "bytes": 8286,
+      "sha256": "9013322b8a895b2579f427322646921dfc52aabed6c36d0e79aab235c576e176"
+    },
+    {
+      "path": "changesafely/run/report.md",
+      "bytes": 1457,
+      "sha256": "5ca6d6b02e517eea26f549c252e83eee344b4574e4a9fc2895ed59d19618fdbc"
+    },
+    {
+      "path": "changesafely/run/state.json",
+      "bytes": 5879,
+      "sha256": "1a85b3890d9678e375d1b3945af3c1f7d1e66f3db5d480864c1037512b071c9d"
+    },
+    {
+      "path": "changesafely/run/trace.jsonl",
+      "bytes": 63323,
+      "sha256": "3d78f2cc5f493c9d5885bd98b8beccbb6a75ac25e755b9949a8f6bf8e907713c"
+    },
+    {
+      "path": "changesafely/run/verification-commands.json",
+      "bytes": 1088,
+      "sha256": "c52b35c610f617a03146e42aaf2122f2a27197365bae99f412c6d50e5d6b1056"
+    },
+    {
+      "path": "changesafely/run/verification.json",
+      "bytes": 1274,
+      "sha256": "7cdafed89fe250010cfbc296228fc3448c36580170cc8d483449a47e41b0cac3"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 1016,
+      "sha256": "942f7fecb5e7cc0b6e09917187cbca1b4fccbadb47b9a06bbda90fb633725678"
+    },
+    {
+      "path": "diff.patch",
+      "bytes": 4998,
+      "sha256": "899162aa9ea6bbabbae63f6882775310f0fd90bae601e8a689af8a07f4eb6623"
+    },
+    {
+      "path": "evaluation.json",
+      "bytes": 1668,
+      "sha256": "39dde8fe81b7dcbc6319b3dd0d57dfa33d4fb4a773390300289f7e8400afcaed"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 63323,
+      "sha256": "3d78f2cc5f493c9d5885bd98b8beccbb6a75ac25e755b9949a8f6bf8e907713c"
+    },
+    {
+      "path": "run.json",
+      "bytes": 1512,
+      "sha256": "aa08d1460055d789db375e566cc122bd25744b9e76cc90bb1e8a284be309d925"
+    },
+    {
+      "path": "worker.json",
+      "bytes": 461,
+      "sha256": "c819ca377be7b4255c571d54caaf8134a23bee389353b9369af22ec6e6a34300"
+    }
+  ]
+}

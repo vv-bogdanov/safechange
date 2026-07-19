@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "test-author",
+    "createdAt": "2026-07-19T15:34:31.913Z",
+    "inputs": {
+      "contract": "8db47bdd5c8722da4377a69f2a17374cb20ad11698821f34bf2cd10767dafed4",
+      "decision": "5ad7c09d701f72a2fb4541eaf039839e055e977889bc649620132147050677d2",
+      "plan-1": "091caf05f379051f2d8f2e428a6da5fdc669fc88f133063ec09a5f72ab0a495f"
+    }
+  },
+  "payload": {
+    "summary": "Added cache-focused tests to authorization-service tests covering cache miss population, cache-hit avoidance of permission loads, stale-refresh behavior with cache overwrite, and tenant-scoped cache key isolation, while keeping existing behavior tests intact.",
+    "testPaths": [
+      "test/authorization-service.test.ts"
+    ],
+    "fixturePaths": [],
+    "targetedCommand": {
+      "name": "npm test",
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "purpose": "Execute the repository’s required test pipeline (build + node test runner) against updated authorization cache tests."
+    },
+    "expectedBaselineOutcome": "fail",
+    "expectedFailure": "Existing implementation never reads or writes AuthorizationCache, so new tests expecting cache hits/misses, load minimization, and snapshot refresh fail to observe those behaviors.",
+    "protectedPaths": [
+      "test/authorization-service.test.ts"
+    ],
+    "protectedHashes": {
+      "test/authorization-service.test.ts": "cc2c14d6dbcf9a5ad2cfe3d1a66f177c77f31bd08da406f642897baf7e5e2813"
+    },
+    "testCommit": "cafd8676cea2b9f97f6d1d9e19215d5f99fe1fad"
+  }
+}

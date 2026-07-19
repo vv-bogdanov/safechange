@@ -10,6 +10,8 @@ Specification and task cards for the ChangeSafely pilot benchmark.
    scenario notes for the three benchmark tasks.
 3. [`RESULTS.md`](RESULTS.md) - retained Spark development-pilot results and their
    limitations. These are not final measurements.
+4. [`golden/spark-pilot`](golden/spark-pilot/README.md) - published, hash-verified
+   evidence for the two current-product Spark pairs.
 
 ## Core idea
 
@@ -62,6 +64,17 @@ npm run benchmark:smoke -- --scenario double-charge --mode changesafely
 The smoke command defaults to `gpt-5.3-codex-spark`. `--model` remains available for
 an explicit override, but the controller rejects non-Spark runs until a separate user
 command authorizes final measurements.
+
+After reviewing an evaluated paired Spark comparison for the same scenario, a final
+measurement still requires both an explicit model and the `--final` gate:
+
+```sh
+npm run benchmark -- run --scenario <scenario> --mode direct --model <id> --final
+npm run benchmark -- run --scenario <scenario> --mode changesafely --model <id> --final
+```
+
+Do not run these commands without separate user authorization. The measurement type
+is persisted in every newly created comparison and run document.
 
 Tenant Leak uses the same commands with `--scenario tenant-leak` after its deterministic
 validator passes. Restart Storm uses `--scenario restart-storm` under the same gate.

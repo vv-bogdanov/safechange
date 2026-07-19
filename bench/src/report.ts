@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isTestPath } from "../../src/repository-policy.js";
 import { loadAnalysisPackageIfPresent, type VerifiedAnalysis } from "./analysis.js";
-import type { AnalysisDocument, BenchmarkMode, EvaluationDocument } from "./contracts.js";
+import type {
+  AnalysisDocument,
+  BenchmarkMeasurement,
+  BenchmarkMode,
+  EvaluationDocument,
+} from "./contracts.js";
 import { validateEvaluationDocument } from "./contracts.js";
 import {
   contentSha256,
@@ -14,7 +19,7 @@ import {
 } from "./evidence.js";
 import { repositoryCommand } from "./repository.js";
 
-const REPORT_VERSION = 1;
+const REPORT_VERSION = 2;
 const LIMITATIONS = [
   "This is a custom pilot suite, not universal or statistically significant proof.",
   "Each registered comparison permits one attempt per mode.",
@@ -55,6 +60,7 @@ export interface BenchmarkReport {
   limitations: readonly string[];
   comparisons: Array<{
     comparisonId: string;
+    measurement: BenchmarkMeasurement;
     scenario: string;
     model: string;
     effort: string;
@@ -110,6 +116,7 @@ export async function buildBenchmarkReport(resultsRoot: string): Promise<Benchma
     }
     comparisons.push({
       comparisonId,
+      measurement: first.run.measurement ?? "development",
       scenario: first.run.scenario,
       model: first.run.model,
       effort: first.run.effort,
@@ -180,6 +187,7 @@ function renderMarkdownReport(report: BenchmarkReport): string {
     lines.push(
       `## ${escapeMarkdown(comparison.scenario)} (${comparison.comparisonId})`,
       "",
+      `- Measurement: \`${comparison.measurement}\``,
       `- Model: \`${escapeMarkdown(comparison.model)}\``,
       `- Effort: \`${escapeMarkdown(comparison.effort)}\``,
       `- Paired: ${comparison.paired ? "yes" : "no"}`,

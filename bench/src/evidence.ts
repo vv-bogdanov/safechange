@@ -155,6 +155,7 @@ function verifyComparisonLineage(run: RunDocument, content: Buffer): void {
   );
   if (
     comparison.comparisonId !== run.comparisonId ||
+    (comparison.measurement ?? "development") !== (run.measurement ?? "development") ||
     comparison.scenario !== run.scenario ||
     comparison.taskText !== run.taskText ||
     comparison.taskSha256 !== run.taskSha256 ||

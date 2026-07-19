@@ -1,0 +1,132 @@
+diff --git a/src/authorization-service.ts b/src/authorization-service.ts
+index dfb76fc..b0fa149 100644
+--- a/src/authorization-service.ts
++++ b/src/authorization-service.ts
+@@ -34,8 +34,16 @@ export class AuthorizationService {
+     if (!request.tenantId.trim() || !request.userId.trim()) return false;
+     const subject = { tenantId: request.tenantId, userId: request.userId };
+     try {
+-      await this.backend.version(subject);
++      const cacheKey = JSON.stringify([subject.tenantId, subject.userId]);
++      const cachedSnapshot = await this.cache.get(cacheKey);
++      const version = await this.backend.version(subject);
++
++      if (cachedSnapshot?.version === version) {
++        return cachedSnapshot.permissions.includes(request.permission);
++      }
++
+       const permissions = await this.backend.loadPermissions(subject);
++      await this.cache.set(cacheKey, { version, permissions });
+       return permissions.includes(request.permission);
+     } catch {
+       return false;
+diff --git a/test/authorization-service.test.ts b/test/authorization-service.test.ts
+index c55b561..6e26fee 100644
+--- a/test/authorization-service.test.ts
++++ b/test/authorization-service.test.ts
+@@ -13,6 +13,7 @@ import {
+ class MemoryBackend implements AuthorizationBackend {
+   readonly entries = new Map<string, AuthorizationSnapshot>();
+   permissionLoads = 0;
++  versionCalls = 0;
+   fail = false;
+ 
+   set(subject: AuthorizationSubject, version: string, permissions: Permission[]): void {
+@@ -20,6 +21,7 @@ class MemoryBackend implements AuthorizationBackend {
+   }
+ 
+   async version(subject: AuthorizationSubject): Promise<string> {
++    this.versionCalls += 1;
+     if (this.fail) throw new Error("backend unavailable");
+     return this.entries.get(key(subject))?.version ?? "missing";
+   }
+@@ -80,6 +82,89 @@ test("uses separate tenant lookups", async () => {
+   );
+ });
+ 
++test("loads and caches snapshot on miss", async () => {
++  const backend = new MemoryBackend();
++  const cache = new MemoryCache();
++  backend.set({ tenantId: "tenant-a", userId: "user-1" }, "1", ["document:read"]);
++  const service = new AuthorizationService(backend, cache);
++
++  const allowed = await service.authorize({
++    tenantId: "tenant-a",
++    userId: "user-1",
++    permission: "document:read",
++  });
++
++  assert.equal(allowed, true);
++  assert.equal(backend.versionCalls, 1);
++  assert.equal(backend.permissionLoads, 1);
++  const snapshot = cache.entries.get(key({ tenantId: "tenant-a", userId: "user-1" }));
++  assert.deepEqual(snapshot, { version: "1", permissions: ["document:read"] });
++});
++
++test("uses cache for permission check when snapshot version matches", async () => {
++  const backend = new MemoryBackend();
++  const cache = new MemoryCache();
++  const subject = { tenantId: "tenant-a", userId: "user-1" };
++  cache.entries.set(key(subject), { version: "1", permissions: ["document:read"] });
++  backend.set(subject, "1", ["document:write"]);
++  const service = new AuthorizationService(backend, cache);
++
++  const denied = await service.authorize({
++    tenantId: "tenant-a",
++    userId: "user-1",
++    permission: "document:write",
++  });
++
++  assert.equal(denied, false);
++  assert.equal(backend.versionCalls, 1);
++  assert.equal(backend.permissionLoads, 0);
++});
++
++test("refreshes stale cache snapshot based on version", async () => {
++  const backend = new MemoryBackend();
++  const cache = new MemoryCache();
++  const subject = { tenantId: "tenant-a", userId: "user-1" };
++  cache.entries.set(key(subject), { version: "1", permissions: ["document:read"] });
++  backend.set(subject, "2", ["document:write"]);
++  const service = new AuthorizationService(backend, cache);
++
++  const allowed = await service.authorize({
++    tenantId: "tenant-a",
++    userId: "user-1",
++    permission: "document:write",
++  });
++
++  assert.equal(allowed, true);
++  assert.equal(backend.versionCalls, 1);
++  assert.equal(backend.permissionLoads, 1);
++  assert.deepEqual(cache.entries.get(key(subject)), {
++    version: "2",
++    permissions: ["document:write"],
++  });
++});
++
++test("does not reuse cache snapshot across tenant mismatch", async () => {
++  const backend = new MemoryBackend();
++  const cache = new MemoryCache();
++  cache.entries.set(key({ tenantId: "tenant-b", userId: "user-1" }), {
++    version: "1",
++    permissions: ["admin"],
++  });
++  backend.set({ tenantId: "tenant-a", userId: "user-1" }, "1", []);
++  backend.set({ tenantId: "tenant-b", userId: "user-1" }, "1", ["admin"]);
++  const service = new AuthorizationService(backend, cache);
++
++  const denied = await service.authorize({
++    tenantId: "tenant-a",
++    userId: "user-1",
++    permission: "admin",
++  });
++
++  assert.equal(denied, false);
++  assert.equal(backend.versionCalls, 1);
++  assert.equal(backend.permissionLoads, 1);
++});
++
+ test("denies invalid subjects and backend errors", async () => {
+   const backend = new MemoryBackend();
+   const service = new AuthorizationService(backend, new MemoryCache());

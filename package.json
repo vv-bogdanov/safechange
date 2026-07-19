@@ -43,7 +43,7 @@
     "benchmark": "npm run build --silent && node dist/bench/src/cli.js",
     "benchmark:smoke": "npm run benchmark -- run",
     "benchmark:validate": "npm run build --silent && node dist/bench/src/cli.js validate --scenario double-charge && node dist/bench/src/cli.js validate --scenario tenant-leak && node dist/bench/src/cli.js validate --scenario restart-storm",
-    "benchmark:ci": "npm run benchmark:validate && node --test dist/test/benchmark-controller.test.js dist/test/benchmark-analysis.test.js",
+    "benchmark:ci": "npm run benchmark:validate && node --test dist/test/benchmark-controller.test.js dist/test/benchmark-analysis.test.js dist/test/benchmark-golden.test.js",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "deadcode:check": "knip",

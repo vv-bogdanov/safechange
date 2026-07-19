@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "contract",
+    "createdAt": "2026-07-19T15:47:51.114Z",
+    "inputs": {
+      "evidence": "5e01356d891edc1a98140bd62a1ef06713fd352997ce8cf8e6b64d7fec1627f4"
+    }
+  },
+  "payload": {
+    "goal": "Gate readiness on database availability so pods are not marked ready when the database is unavailable, preventing traffic routing to unhealthy instances.",
+    "acceptanceCriteria": [
+      {
+        "id": "AC-001",
+        "statement": "Modify `HealthService.readiness()` so it returns false when `DatabaseHealth.isAvailable()` resolves to false and true only when both the process is ready and the database is available."
+      },
+      {
+        "id": "AC-002",
+        "statement": "Keep readiness checks deterministic under DB errors by treating any `isAvailable()` rejection as readiness failure."
+      },
+      {
+        "id": "AC-003",
+        "statement": "Preserve existing liveness and startup method signatures and semantics unless explicitly required by this contract, with no changes to their external contracts."
+      },
+      {
+        "id": "AC-004",
+        "statement": "Add/extend `test/health-service.test.ts` cases to verify readiness becomes false when DB is unavailable and true when DB is available while process state is running."
+      },
+      {
+        "id": "AC-005",
+        "statement": "Ensure the project still builds and tests via the existing `npm run build` and `npm test` commands and they both complete successfully."
+      }
+    ],
+    "protectedInvariants": [
+      {
+        "id": "PI-001",
+        "statement": "`HealthService` and `DatabaseHealth` public TypeScript types and method signatures remain source-compatible for existing callers."
+      },
+      {
+        "id": "PI-002",
+        "statement": "No production dependencies are added and TypeScript strict-mode compliance is preserved under `tsconfig.json`."
+      },
+      {
+        "id": "PI-003",
+        "statement": "Readiness is the only health gate changed for routing intent, with unrelated health semantics and deployment non-health settings unchanged."
+      },
+      {
+        "id": "PI-004",
+        "statement": "`deployment.json` may be read for verification but readiness path (`/health/ready`) or existing probe definitions are changed only with explicit approval."
+      }
+    ],
+    "nonGoals": [
+      "Implement broader routing or ingress/load-balancer logic outside the repository's health-service contract."
+    ],
+    "allowedPathPrefixes": [
+      "src/health-service.ts",
+      "test/health-service.test.ts",
+      "deployment.json",
+      "package.json"
+    ],
+    "approvalRequiredChanges": [
+      "Any edit to `deployment.json` readiness/liveness/startup probe parameters, paths, or behavior must be approved before merge."
+    ],
+    "evidenceGaps": [
+      "There is currently no test that exercises the HTTP `/health/ready` endpoint flow end-to-end with the probe contract outside service unit methods."
+    ],
+    "risks": [
+      "If `DatabaseHealth.isAvailable()` is slow or fails intermittently, readiness may flap and cause unnecessary traffic diversion.",
+      "Unexpected DB dependency in readiness can reduce availability during short transient outages unless probe thresholds remain calibrated for operational tolerance."
+    ],
+    "unknowns": [
+      "Whether upstream infrastructure actually uses readiness probe failures from `/health/ready` as the sole traffic-routing signal is not provable from these files alone.",
+      "Whether any external gateway or service mesh bypasses Kubernetes readiness and routes traffic using additional logic is outside the inspected code surface."
+    ]
+  }
+}

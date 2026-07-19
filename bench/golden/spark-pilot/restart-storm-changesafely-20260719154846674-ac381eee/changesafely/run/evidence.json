@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-47-21-603Z-35786606",
+    "baselineCommit": "759ff521224e00666a72601e5bceb50943a935f6",
+    "role": "discovery",
+    "createdAt": "2026-07-19T15:47:44.575Z",
+    "inputs": {}
+  },
+  "payload": {
+    "summary": "Discovery completed for the health-routing surface. Current code does not gate readiness on database availability, so traffic can still be routed while the DB is down.",
+    "facts": [
+      {
+        "id": "f1",
+        "claim": "Repository scripts define only `build` and `test`; there is no `typecheck` script.",
+        "references": [
+          {
+            "path": "package.json",
+            "detail": "`scripts`: `build: \"tsc -p tsconfig.json\"`, `test: \"npm run build && node --test dist/test/*.test.js\"`; no `typecheck` entry exists."
+          }
+        ]
+      },
+      {
+        "id": "f2",
+        "claim": "The non-interactive build command is `tsc -p tsconfig.json`, which performs a TypeScript compile under strict settings.",
+        "references": [
+          {
+            "path": "package.json",
+            "detail": "`build` script is exactly `tsc -p tsconfig.json`."
+          },
+          {
+            "path": "tsconfig.json",
+            "detail": "Compiler uses strict mode (`\"strict\": true`) and outputs to `dist`."
+          }
+        ]
+      },
+      {
+        "id": "f3",
+        "claim": "The non-interactive test command is `npm run build && node --test dist/test/*.test.js`.",
+        "references": [
+          {
+            "path": "package.json",
+            "detail": "`test` script chains compile and Node test runner over `dist/test/*.test.js`."
+          }
+        ]
+      },
+      {
+        "id": "f4",
+        "claim": "`HealthService` currently ignores database availability in all probe methods; readiness is based only on process state.",
+        "references": [
+          {
+            "path": "src/health-service.ts",
+            "detail": "`liveness` returns `this.processState.running`; `readiness` returns `this.processState.running`; `startup` returns `this.processState.running && this.processState.started`; none call `database.isAvailable()`."
+          }
+        ]
+      },
+      {
+        "id": "f5",
+        "claim": "The `DatabaseHealth` interface exposes `isAvailable(): Promise<boolean>`, but `HealthService` does not use it anywhere, so DB outages are not represented in probe decisions.",
+        "references": [
+          {
+            "path": "src/health-service.ts",
+            "detail": "Interface defines `isAvailable()`; implementation in tests provides `MutableDatabase.isAvailable`, but production methods in `HealthService` never call it."
+          }
+        ]
+      },
+      {
+        "id": "f6",
+        "claim": "Kubernetes readiness routing exists in deployment config (`/health/ready`), while startup/liveness probes point to their own endpoints; readiness is the primary gate used to route traffic to ready pods.",
+        "references": [
+          {
+            "path": "deployment.json",
+            "detail": "`probes.readiness.path` is `/health/ready`; `probes.liveness.path` is `/health/live`; `probes.startup.path` is `/health/startup`."
+          }
+        ]
+      },
+      {
+        "id": "f7",
+        "claim": "Current tests do not validate DB-health behavior for readiness/startup/liveness.",
+        "references": [
+          {
+            "path": "test/health-service.test.ts",
+            "detail": "Tests construct `HealthService` with `new MutableDatabase()` always true; assertions only cover process state transitions and do not assert DB availability impacts."
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "name": "npm test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Non-interactive test entrypoint currently used in this repository."
+      },
+      {
+        "name": "npm run build",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "purpose": "Non-interactive build/compile entrypoint."
+      }
+    ],
+    "testGaps": [
+      "No test covers `readiness` returning false when `DatabaseHealth.isAvailable()` is false.",
+      "No test ensures startup/liveness/readiness behavior changes under DB unavailability.",
+      "No repository test exercises HTTP routing/infrastructure probe handling (`/health/ready`) beyond service method contracts."
+    ],
+    "constraints": [
+      "Must use strict TypeScript (`tsconfig.json` has `\"strict\": true` and related strict flags).",
+      "Keep existing public API compatible.",
+      "Do not add production dependencies.",
+      "Do not run deploy/apply/external infrastructure commands.",
+      "Keep deployment parameters unrelated to health routing unchanged.",
+      "No `typecheck` npm script exists; only `build` and `test` scripts are defined.",
+      "Read-only discovery only; no file writes or command execution beyond inspection in this turn."
+    ],
+    "assumptions": [
+      "Readiness endpoint `/health/ready` is the control used by platform to stop routing traffic; this aligns with standard Kubernetes behavior and the provided `deployment.json` probe definitions."
+    ],
+    "unknowns": [
+      "Whether deployment wiring actually maps readiness probe failures to external load balancer traffic behavior is not verifiable from these files alone.",
+      "Whether additional service/router code outside this repository further gates traffic on DB health is not present in the inspected surface."
+    ]
+  }
+}

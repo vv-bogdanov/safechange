@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "contract",
+    "createdAt": "2026-07-19T15:33:53.018Z",
+    "inputs": {
+      "evidence": "d3655d0b866398ba8f65c5ba426c240d4a42f2826f8de1f6224f7da4076f6c7f"
+    }
+  },
+  "payload": {
+    "goal": "Add cache-aware authorization execution in the authorization service to reduce backend work while preserving the existing public authorization API and behavior.",
+    "acceptanceCriteria": [
+      {
+        "id": "AC-01",
+        "statement": "AuthorizationService.authorize must consult AuthorizationCache.get for a subject-derived key before performing permission checks against the backend."
+      },
+      {
+        "id": "AC-02",
+        "statement": "On cache miss or empty snapshot, authorize must call backend.version and backend.loadPermissions for the subject and then persist both returned fields via cache.set."
+      },
+      {
+        "id": "AC-03",
+        "statement": "When cache returns a non-stale snapshot for the same subject context, authorize must use cached permissions instead of calling backend.loadPermissions for that request."
+      },
+      {
+        "id": "AC-04",
+        "statement": "When cached snapshot version is absent or does not match backend version, authorize must refresh the cache by reloading from backend and overwrite the snapshot."
+      },
+      {
+        "id": "AC-05",
+        "statement": "All current authorization decision outcomes (allowed/denied, tenant scoping, invalid subject, backend error) must remain unchanged from previous behavior for valid inputs and failure paths."
+      },
+      {
+        "id": "AC-06",
+        "statement": "Add or extend tests under test/authorization-service.test.ts to assert cache-miss, cache-hit, stale-cache refresh, and cache-write behavior with observable backend call counts and tenant isolation."
+      }
+    ],
+    "protectedInvariants": [
+      {
+        "id": "PI-01",
+        "statement": "No exported/public types or method signatures, including constructor and authorize, may be changed."
+      },
+      {
+        "id": "PI-02",
+        "statement": "No new production dependencies may be added and no non-test tooling dependencies may be introduced in package manifests."
+      },
+      {
+        "id": "PI-03",
+        "statement": "Behavior for authorization semantics and validation must remain compatible with current tests, including tenant separation rules."
+      },
+      {
+        "id": "PI-04",
+        "statement": "Any modifications must stay confined to authorization service caching logic and its tests with no unrelated module behavior changes."
+      },
+      {
+        "id": "PI-05",
+        "statement": "Project-wide strict TypeScript guarantees and existing strict compiler configuration semantics must remain intact."
+      }
+    ],
+    "nonGoals": [
+      "Implement cache TTL, eviction policy, multi-level/distributed caching, or background refresh behavior.",
+      "Expose new public cache-management APIs or configuration surface area.",
+      "Add new dependency-backed observability, metrics, or tracing hooks unrelated to functional correctness of caching.",
+      "Modify build/test scripts, repository tooling, or unrelated package metadata.",
+      "Add any non-cache authentication, permission-model, or tenant-model features."
+    ],
+    "allowedPathPrefixes": [
+      "src/",
+      "test/"
+    ],
+    "approvalRequiredChanges": [
+      "Approve a concrete cache-keying strategy if it is not simply the subject identifier already implied by existing tenant-separation behavior.",
+      "Approve any deviation from a version-staleness policy for cache invalidation (for example, introducing TTL or probabilistic refresh).",
+      "Approve fallback semantics if cache failures should be propagated versus treated as backend fallback only."
+    ],
+    "evidenceGaps": [
+      "There is no existing benchmark or assertion baseline proving before/after backend-call reduction for authorization flows.",
+      "No current test suite asserts cache correctness patterns, so exact edge-case call-order expectations are not yet evidenced.",
+      "The repository does not document cache fault-tolerance policy (soft-fail/fallback vs hard-fail) for cache read/write errors."
+    ],
+    "risks": [
+      "An incorrect cache-key scope could cause cross-tenant permission leakage or incorrect denial/allow outcomes.",
+      "Version-skew or stale snapshot logic could serve outdated permissions if validation checks are incomplete.",
+      "Over-eager short-circuiting on cache hits could skip required backend validation and change existing authorization results."
+    ],
+    "unknowns": [
+      "Whether the cache key should be raw subject, tenant-scoped subject, or another normalized variant is not specified by existing code or tests.",
+      "Whether cache transport failures should be ignored, logged, or surfaced is not currently defined.",
+      "Whether cache.set failures should abort authorization or be treated as non-fatal cache misses is not defined."
+    ]
+  }
+}

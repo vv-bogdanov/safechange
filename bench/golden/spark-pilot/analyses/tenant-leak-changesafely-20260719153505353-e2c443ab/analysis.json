@@ -1,0 +1,58 @@
+{
+  "analysisVersion": 1,
+  "runId": "tenant-leak-changesafely-20260719153505353-e2c443ab",
+  "evidenceManifestSha256": "3b7c951d04b757392e57c171273cb6c6cd180ac9cde502a7dfb58e3ed4b25d69",
+  "scenario": "tenant-leak",
+  "candidateTests": {
+    "paths": [
+      "test/authorization-service.test.ts"
+    ],
+    "patchSha256": "c815b6368899828ba911c3f271ad153db26eddbfcc0668263ba2fbef987c45fc",
+    "additions": 85,
+    "deletions": 0
+  },
+  "reference": {
+    "passed": true,
+    "process": {
+      "started": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false
+    }
+  },
+  "mutants": [
+    {
+      "id": "user-only-key",
+      "killed": true,
+      "process": {
+        "started": true,
+        "exitCode": 1,
+        "signal": null,
+        "timedOut": false
+      }
+    },
+    {
+      "id": "stale-positive",
+      "killed": true,
+      "process": {
+        "started": true,
+        "exitCode": 1,
+        "signal": null,
+        "timedOut": false
+      }
+    }
+  ],
+  "mutation": {
+    "killed": 2,
+    "total": 2,
+    "killRate": 1
+  },
+  "protectedTests": {
+    "applicable": true,
+    "intact": true,
+    "paths": [
+      "test/authorization-service.test.ts"
+    ],
+    "detail": "All protected test hashes match the final snapshot."
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "meta": {
+    "artifactVersion": 2,
+    "producerVersion": "0.1.0",
+    "runId": "2026-07-19T15-33-22-074Z-d50cc98c",
+    "baselineCommit": "04f0d6156c3edb848c1669e6528beb8686fafdcb",
+    "role": "planner:plan-3",
+    "createdAt": "2026-07-19T15:34:13.020Z",
+    "inputs": {
+      "contract": "8db47bdd5c8722da4377a69f2a17374cb20ad11698821f34bf2cd10767dafed4"
+    }
+  },
+  "payload": {
+    "planId": "plan-3",
+    "lens": "risk-first",
+    "title": "Add version-aware cache reads before backend permission loading while keeping existing authorization flow unchanged.",
+    "approach": "Route authorization to use cached snapshots first, validate freshness by version, and only fall back to backend reload when required, then verify behavior and side effects with targeted tests.",
+    "rationale": "This order limits behavioral risk by preserving decision logic and adding caching only in the data-retrieval layer under explicit staleness rules.",
+    "acceptanceCoverage": [
+      {
+        "id": "AC-01",
+        "strategy": "Verify authorize calls AuthorizationCache.get with the subject-derived cache key before any backend permission-load branch is executed."
+      },
+      {
+        "id": "AC-02",
+        "strategy": "Verify a cache miss or missing snapshot triggers backend.version plus backend.loadPermissions and then persists the returned version and permissions via cache.set."
+      },
+      {
+        "id": "AC-03",
+        "strategy": "Verify a non-stale cache hit for the same subject context skips backend.loadPermissions for that authorization decision while preserving permission result correctness."
+      },
+      {
+        "id": "AC-04",
+        "strategy": "Verify stale or versionless snapshots trigger backend reload and overwrite cache state before authorization evaluation proceeds."
+      },
+      {
+        "id": "AC-05",
+        "strategy": "Verify tenant scoping, allowed/denied outcomes, invalid-subject checks, and backend-error semantics remain unchanged under cache-enabled execution."
+      },
+      {
+        "id": "AC-06",
+        "strategy": "Verify tests in test/authorization-service.test.ts cover miss, hit, stale refresh, and cache-write behavior with backend call observability."
+      }
+    ],
+    "invariantProtection": [
+      {
+        "id": "PI-01",
+        "strategy": "Do not modify public interfaces, constructor signature, or authorize method signature."
+      },
+      {
+        "id": "PI-02",
+        "strategy": "Do not add production dependencies or tooling dependencies in package manifests and keep implementation changes within existing runtime contracts."
+      },
+      {
+        "id": "PI-03",
+        "strategy": "Preserve current authorization semantics, including tenant separation, by only changing snapshot source ordering and freshness handling."
+      },
+      {
+        "id": "PI-04",
+        "strategy": "Restrict code changes to authorization caching logic and its tests with no unrelated module or script changes."
+      },
+      {
+        "id": "PI-05",
+        "strategy": "Keep TypeScript strict-mode compatibility and avoid introducing type weakening patterns."
+      }
+    ],
+    "files": [
+      {
+        "path": "src/authorization-service.ts",
+        "purpose": "Implement internal cache lookup, stale-check, and conditional backend fallback logic without changing public API."
+      },
+      {
+        "path": "test/authorization-service.test.ts",
+        "purpose": "Add cache-focused tests for miss/hit/stale behavior and backend call-count assertions while keeping existing decision tests intact."
+      }
+    ],
+    "steps": [
+      {
+        "id": "S1",
+        "description": "Inspect current authorize control flow and snapshot structures to define precise insertion points for cache-first resolution with minimal branch drift.",
+        "paths": [
+          "src/authorization-service.ts"
+        ]
+      },
+      {
+        "id": "S2",
+        "description": "Add internal cache-resolution path in authorize that fetches from cache, validates snapshot freshness by version, and updates via set only after backend refresh.",
+        "paths": [
+          "src/authorization-service.ts"
+        ]
+      },
+      {
+        "id": "S3",
+        "description": "Add cache-miss test coverage asserting backend.version, backend.loadPermissions, and cache.set are exercised for fresh loading.",
+        "paths": [
+          "test/authorization-service.test.ts"
+        ]
+      },
+      {
+        "id": "S4",
+        "description": "Add cache-hit test coverage asserting backend.loadPermissions is not called and permissions come from cached snapshot.",
+        "paths": [
+          "test/authorization-service.test.ts"
+        ]
+      },
+      {
+        "id": "S5",
+        "description": "Add stale-snapshot and tenant-isolation cache tests proving refresh occurs on version mismatch and isolation remains per subject context.",
+        "paths": [
+          "test/authorization-service.test.ts"
+        ]
+      },
+      {
+        "id": "S6",
+        "description": "Run npm test and only iterate on implementation changes required to restore full pass of the suite.",
+        "paths": [
+          "src/authorization-service.ts",
+          "test/authorization-service.test.ts"
+        ]
+      }
+    ],
+    "safetyTests": [
+      {
+        "name": "npm test",
+        "proves": "AC-01 through AC-06 and all invariants",
+        "argv": [
+          "npm",
+          "test"
+        ]
+      }
+    ],
+    "verificationCommands": [
+      {
+        "name": "npm run build",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "purpose": "Run TypeScript compilation for strict-mode type safety validation during implementation."
+      },
+      {
+        "name": "npm test",
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "purpose": "Run full repository verification required by project instructions."
+      }
+    ],
+    "dependencies": [],
+    "migrations": [],
+    "approvalRequiredChanges": [],
+    "risks": [
+      "Using an incorrect cache key can cross tenant boundaries and return wrong permissions, so keying must exactly match existing subject semantics.",
+      "Refreshing too late on stale versions can grant authorization from outdated snapshots under permission updates.",
+      "Using cached snapshots inappropriately could suppress required backend validation and alter allow/deny outcomes in edge cases."
+    ],
+    "assumptions": [
+      "The backend API contract for version and loadPermissions remains stable while implementing cache-based resolution.",
+      "AuthorizationCache.get/set continue to return and accept AuthorizationSnapshot with version and permissions in their current shape.",
+      "Test scaffolding can track call counts without adding dependencies beyond existing test framework."
+    ],
+    "unknowns": [
+      {
+        "description": "Whether cache failures should propagate, be logged, or degrade gracefully to backend fallback is unresolved.",
+        "critical": true,
+        "resolution": "Choose a single explicit strategy in implementation and encode it in tests."
+      },
+      {
+        "description": "The cache key should remain subject-derived or include explicit tenant-derived normalization depending on tenant model expectations.",
+        "critical": true,
+        "resolution": "Adopt subject-based keying aligned with current tenant semantics unless product guidance requires normalization."
+      },
+      {
+        "description": "Whether cache.set failures should fail authorization or be treated as non-fatal is not currently specified.",
+        "critical": true,
+        "resolution": "Decide one deterministic behavior and test it explicitly before code changes."
+      }
+    ],
+    "recovery": [
+      "If call-order assertions fail, reduce scope to only the caching guard and refresh path while preserving old branching conditions.",
+      "If any strict-mode regression appears, revert to prior typing patterns in the edited method and reintroduce cache fields with explicit type guards.",
+      "If tenant-isolation regressions appear in tests, enforce strict subject-scoped keys and keep tenant context out of cache mutation path."
+    ],
+    "rejectionReasons": []
+  }
+}

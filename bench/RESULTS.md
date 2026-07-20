@@ -1,7 +1,8 @@
 # Spark development review
 
-> Development evidence recorded on 2026-07-19. These are not final or publishable
-> measurements. Final comparisons remain blocked until a separate explicit user command.
+> Development evidence recorded on 2026-07-19 through 2026-07-20 UTC. These are not final or
+> publishable measurements. Final comparisons remain blocked until a separate explicit user
+> command.
 
 ## Current results
 
@@ -15,50 +16,53 @@ not pass on the reference, so a mutation percentage would be misleading.
 
 | Scenario | Direct outcome | Mutants | Time / turns | Tokens | ChangeSafely outcome | Product status | Mutants | Time / turns | Tokens |
 | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: | ---: |
-| Double Charge v3 | `visible_failure` | n/a | 13.4 s / 1 | 79,171 / 65,536 | `visible_failure` | `FAILED` | 3/6 | 63.8 s / 11 | 500,750 / 352,128 |
-| Tenant Leak v3 | `unsafe_green` | 1/9 | 16.6 s / 1 | 96,511 / 84,864 | `unsafe_green` | `FAILED` | n/a | 156.0 s / 12 | 1,786,563 / 1,565,312 |
-| Restart Storm v3 | `unsafe_green` | 2/7 | 13.4 s / 1 | 84,494 / 73,216 | `visible_failure` | `FAILED` | 2/7 | 329.9 s / 7 | 259,332 / 173,952 |
-| Legacy Spaghetti v3 | `safe_success` | 5/8 | 24.3 s / 1 | 176,410 / 153,088 | `unsafe_green` | `REPLAN_REQUIRED` | 6/8 | 123.1 s / 12 | 1,421,487 / 1,224,192 |
-| Partial Replay v2 | `unsafe_green` | n/a | 34.0 s / 1 | 152,821 / 138,752 | `unsafe_green` | `REPLAN_REQUIRED` | n/a | 207.6 s / 13 | 1,646,540 / 1,405,184 |
-| Cancellation Saga v1 | `unsafe_green` | n/a | 45.1 s / 1 | 203,342 / 173,440 | `unsafe_green` | `VERIFIED` | n/a | 97.3 s / 12 | 691,902 / 492,672 |
-| Contract Drift v2 | `safe_success` | n/a | 27.0 s / 1 | 124,017 / 107,776 | `visible_failure` | `FAILED` | n/a | 61.1 s / 11 | 423,716 / 304,384 |
+| Double Charge v4 | `safe_success` | 4/7 | 13.8 s / 1 | 65,151 / 51,072 | `safe_success` | `VERIFIED` | 6/7 | 91.3 s / 13 | 629,309 / 445,824 |
+| Tenant Leak v4 | `unsafe_green` | 5/11 | 18.2 s / 1 | 77,778 / 67,328 | `unsafe_green` | `VERIFIED` | 4/11 | 84.6 s / 13 | 583,151 / 393,984 |
+| Restart Storm v3 | `unsafe_green` | 1/7 | 23.1 s / 1 | 122,806 / 114,176 | `unsafe_green` | `VERIFIED` | 2/7 | 75.8 s / 13 | 512,472 / 333,824 |
+| Legacy Spaghetti v3 | `safe_success` | 6/8 | 70.0 s / 1 | 561,004 / 508,800 | `safe_success` | `VERIFIED` | 7/8 | 130.1 s / 13 | 975,609 / 785,920 |
+| Partial Replay v3 | `unsafe_green` | 5/6 | 17.7 s / 1 | 91,787 / 76,928 | `unsafe_green` | `VERIFIED` | n/a | 146.7 s / 13 | 1,032,158 / 813,952 |
+| Cancellation Saga v2 | `unsafe_green` | n/a | 16.6 s / 1 | 74,656 / 54,656 | `unsafe_green` | `VERIFIED` | n/a | 107.6 s / 9 | 903,748 / 728,320 |
+| Contract Drift v4 | `safe_success` | 4/9 | 52.8 s / 1 | 255,944 / 233,472 | `safe_success` | `VERIFIED` | 5/9 | 84.3 s / 13 | 632,452 / 448,256 |
 
-The result is deliberately unflattering and useful. Direct achieved safe success on two of
-seven scenarios; ChangeSafely achieved none in this single-attempt Spark sample. The evidence
-does not support a superiority claim.
+The result is deliberately mixed and useful. Direct and ChangeSafely each achieved safe success
+on three of seven scenarios. Both missed the same core hazards in Tenant Leak, Restart Storm,
+and Partial Replay. The evidence does not support a task-success superiority claim.
 
-It does show the product's safety boundaries doing real work. ChangeSafely rejected six
-candidates before claiming success: two harnesses rewrote protected fixtures, one deterministic
-verification failed, one model turn timed out, and two implementations exceeded their selected
-plans. Protected harnesses remained intact whenever one reached implementation. The remaining
-PHP candidate was product-`VERIFIED`, but the hidden oracle still found input-conflict and
-retry-key-isolation defects. This is an important limit: independent workflow verification
-reduces risk but is not an oracle.
+All seven ChangeSafely runs reached product status `VERIFIED`, and every protected harness
+remained intact. The hidden oracle nevertheless found unsafe behavior in four candidates. This
+is an important limit: independent workflow verification reduces risk but is not an oracle.
+ChangeSafely candidate tests killed more mutants on Double Charge, Restart Storm, Legacy
+Spaghetti, and Contract Drift, but fewer on Tenant Leak. The Partial Replay and Cancellation
+Saga candidate tests did not pass on the reference, so their mutation results remain `n/a`
+instead of receiving credit for failing everywhere.
 
-Candidate tests were stronger than Direct on Double Charge and Legacy Spaghetti. They were
-invalid against the reference on Tenant Leak, Partial Replay, Cancellation Saga, and Contract
-Drift, so those mutation results remain `n/a` instead of receiving credit for failing everywhere.
+Across the seven attempts, Direct used 212.2 seconds and 1,249,126 total tokens, including
+1,106,432 cached input tokens. ChangeSafely used 720.5 seconds and 5,268,899 total tokens,
+including 3,950,080 cached input tokens. The assurance overhead is material and is reported as
+a measured tradeoff, not hidden or normalized away.
 
 ## Evidence notes
 
-Earlier Python and PHP comparisons exposed a controller-runtime isolation defect. During
+Earlier development comparisons exposed a controller-runtime isolation defect. During
 `npm run`, the benchmark worker inherited the controller's `node_modules/.bin`, causing the
 Codex wrapper to resolve a binary outside the sandbox. Commit `88d2a99` removes only that path,
 preserves the external Codex executable, and has a regression test. The authoritative Python
 and PHP rows above are registered comparisons after that fix. Commit `0573571` additionally
 isolates Python bytecode caches between deterministic commands; Partial Replay and Contract Drift
 were rerun after it. Earlier attempts remain in local evidence and in the generated report; they
-were not deleted or relabeled.
+were not deleted or relabeled. The current rows use comparison manifest v3, which freezes the
+scenario manifest and the complete controller-owned oracle tree, including reference and mutant
+assets.
 
 The current registered comparison IDs are:
 
-- Double Charge: `comparison-01abf67050a0aede`
-- Tenant Leak: `comparison-988467e61b5ad7b1`
-- Restart Storm: `comparison-cf0582e2b916adb3`
-- Legacy Spaghetti: `comparison-82eda1db2f40de39`
-- Partial Replay: `comparison-7f678a47ea637435`
-- Cancellation Saga: `comparison-278d9c588c575cbf`
-- Contract Drift: `comparison-9b5655ae06492d15`
+- Double Charge: `comparison-a1b91dbb37e304dd`
+- Tenant Leak: `comparison-fba7e954c91b940d`
+- Restart Storm: `comparison-7ccb4ea0fda5df25`
+- Legacy Spaghetti: `comparison-3876aa779c12f8b4`
+- Partial Replay: `comparison-072c83bfa36def9a`
+- Cancellation Saga: `comparison-aa4e95ed2bc63aef`
+- Contract Drift: `comparison-fc2c3978ebdfc4ce`
 
 Local raw evidence lives under the Git-ignored `bench/results/`. The generated report records
 per-role time, command/tool activity, correction turns, artifact volume, and total, input,

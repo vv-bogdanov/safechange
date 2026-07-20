@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluatePlan } from "../src/eligibility.js";
+import { evaluateContract, evaluatePlan } from "../src/eligibility.js";
 import type { RepositoryCapabilities } from "../src/repository-capabilities.js";
 import { validContract, validPlan } from "./support/artifacts.js";
 
@@ -29,6 +29,76 @@ test("accepts a complete in-scope plan", () => {
     failures: [],
     humanDecisionReasons: [],
   });
+});
+
+test("rejects unresolved critical contract uncertainty and duplicate ids", () => {
+  const result = evaluateContract(
+    validContract({
+      unknowns: [
+        {
+          id: "AC1",
+          statement: "Failure behavior is not defined.",
+          critical: true,
+          resolutionStatus: "unresolved",
+          resolution: "",
+          relatedIds: ["AC1"],
+          evidenceBasis: [
+            { source: "task", detail: "The task leaves failure behavior open.", references: [] },
+          ],
+        },
+      ],
+    }),
+  );
+
+  assert.deepEqual(
+    result.map((failure) => failure.code),
+    ["DUPLICATE_CONTRACT_ID", "UNRESOLVED_CRITICAL_CONTRACT_UNKNOWN"],
+  );
+});
+
+test("rejects missing critical risk mitigation and unknown coverage ids", () => {
+  const result = evaluatePlan(
+    contract,
+    {
+      ...plan,
+      riskMitigation: [{ id: "R404", strategy: "An unrelated strategy." }],
+    },
+    capabilities,
+  );
+
+  assert.deepEqual(
+    result.failures.map((failure) => failure.code),
+    ["MISSING_CRITICAL_RISK_MITIGATION", "UNKNOWN_COVERAGE_ID"],
+  );
+});
+
+test("rejects an unresolved critical plan unknown", () => {
+  const result = evaluatePlan(
+    contract,
+    {
+      ...plan,
+      unknowns: [
+        {
+          id: "PU1",
+          statement: "The side-effect policy is unknown.",
+          critical: true,
+          resolutionStatus: "unresolved",
+          resolution: "",
+          relatedIds: ["R1"],
+          evidenceBasis: [
+            {
+              source: "repository",
+              detail: "The implementation has an undocumented effect boundary.",
+              references: [{ path: "src/value.ts", detail: "Effect boundary." }],
+            },
+          ],
+        },
+      ],
+    },
+    capabilities,
+  );
+
+  assert.equal(result.failures.at(-1)?.code, "UNRESOLVED_CRITICAL_UNKNOWN");
 });
 
 test("rejects missing coverage and paths outside scope", () => {

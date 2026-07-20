@@ -92,7 +92,10 @@ test("role prompts keep broad reasoning and narrow action boundaries", () => {
   const values = prompts();
   assert.match(values.discovery ?? "", /complete relevant impact surface/u);
   assert.match(values.contract ?? "", /constrain later writes, never read-only inspection/u);
+  assert.match(values.contract ?? "", /Classify changeKind/u);
+  assert.match(values.contract ?? "", /evidenceBasis/u);
   assert.match(values.planner ?? "", /smallest sufficient production delta/u);
+  assert.match(values.planner ?? "", /critical risk in riskMitigation/u);
   assert.match(values.judge ?? "", /strongest executable evidence/u);
   assert.match(values["test-author"] ?? "", /strongest available pre-implementation/u);
   assert.match(values["test-author"] ?? "", /stop rather than invent an unsupported oracle/iu);

@@ -5,7 +5,8 @@ import { ARTIFACT_KEY_PATTERN } from "./artifact-key.js";
 import { ChangeSafelyError } from "./errors.js";
 
 export const RUN_STATE_VERSION = 1;
-export const ARTIFACT_VERSION = 2;
+export const LEGACY_ARTIFACT_VERSION = 2;
+export const ARTIFACT_VERSION = 3;
 
 type Mutable<Value> = Value extends readonly (infer Item)[]
   ? Mutable<Item>[]
@@ -21,11 +22,16 @@ function stringEnum<const Values extends string[]>(...values: Values) {
   return Type.Unsafe<Values[number]>(Type.String({ enum: values }));
 }
 
+const HIGH_RISK_ITEM_LIMIT = 32;
+const HIGH_RISK_PATH_LIMIT = 64;
 const stringSchema = Type.String({ minLength: 1, maxLength: 400 });
-const stringArraySchema = Type.Array(stringSchema, { maxItems: 12 });
+const narrativeSchema = Type.String({ minLength: 1, maxLength: 2_000 });
+const optionalNarrativeSchema = Type.String({ maxLength: 2_000 });
+const identifierSchema = Type.String({ pattern: "^[A-Za-z][A-Za-z0-9._-]{0,99}$" });
+const stringArraySchema = Type.Array(stringSchema, { maxItems: HIGH_RISK_ITEM_LIMIT });
 const referenceSchema = strictObject({
-  path: stringSchema,
-  detail: Type.String({ maxLength: 400 }),
+  path: Type.String({ minLength: 1, maxLength: 4096 }),
+  detail: narrativeSchema,
 });
 const commandSchema = strictObject({
   name: stringSchema,
@@ -33,8 +39,62 @@ const commandSchema = strictObject({
   cwd: Type.String({ minLength: 1, maxLength: 4096 }),
   purpose: stringSchema,
 });
-const contractItemSchema = strictObject({ id: stringSchema, statement: stringSchema });
+const taskEvidenceBasisSchema = strictObject({
+  source: Type.Literal("task"),
+  detail: narrativeSchema,
+  references: Type.Array(referenceSchema, { maxItems: 0 }),
+});
+const repositoryEvidenceBasisSchema = strictObject({
+  source: stringEnum("repository", "preservation"),
+  detail: narrativeSchema,
+  references: Type.Array(referenceSchema, { minItems: 1, maxItems: 8 }),
+});
+const evidenceBasisSchema = Type.Union([taskEvidenceBasisSchema, repositoryEvidenceBasisSchema]);
+const evidenceBasisListSchema = Type.Array(evidenceBasisSchema, { minItems: 1, maxItems: 8 });
+const relatedIdsSchema = Type.Array(identifierSchema, {
+  minItems: 1,
+  maxItems: HIGH_RISK_ITEM_LIMIT,
+});
+const contractItemSchema = strictObject({
+  id: identifierSchema,
+  statement: narrativeSchema,
+  evidenceBasis: evidenceBasisListSchema,
+});
 const coverageSchema = strictObject({ id: stringSchema, strategy: stringSchema });
+const nonGoalSchema = strictObject({
+  id: identifierSchema,
+  statement: narrativeSchema,
+  evidenceBasis: Type.Array(
+    Type.Union([
+      taskEvidenceBasisSchema,
+      strictObject({
+        source: Type.Literal("repository"),
+        detail: narrativeSchema,
+        references: Type.Array(referenceSchema, { minItems: 1, maxItems: 8 }),
+      }),
+    ]),
+    { minItems: 1, maxItems: 8 },
+  ),
+  relatedRiskIds: Type.Array(identifierSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+});
+const riskSchema = strictObject({
+  id: identifierSchema,
+  statement: narrativeSchema,
+  critical: Type.Boolean(),
+  resolutionStatus: stringEnum("unresolved", "mitigated"),
+  resolution: optionalNarrativeSchema,
+  relatedIds: relatedIdsSchema,
+  evidenceBasis: evidenceBasisListSchema,
+});
+const unknownSchema = strictObject({
+  id: identifierSchema,
+  statement: narrativeSchema,
+  critical: Type.Boolean(),
+  resolutionStatus: stringEnum("unresolved", "resolved"),
+  resolution: optionalNarrativeSchema,
+  relatedIds: relatedIdsSchema,
+  evidenceBasis: evidenceBasisListSchema,
+});
 
 export const smokeArtifactSchema = strictObject({
   kind: Type.Literal("smoke"),
@@ -59,15 +119,25 @@ export const evidenceArtifactSchema = strictObject({
 });
 
 export const changeContractSchema = strictObject({
-  goal: stringSchema,
-  acceptanceCriteria: Type.Array(contractItemSchema, { minItems: 1, maxItems: 12 }),
-  protectedInvariants: Type.Array(contractItemSchema, { minItems: 1, maxItems: 12 }),
-  nonGoals: stringArraySchema,
-  allowedPathPrefixes: Type.Array(stringSchema, { minItems: 1, maxItems: 12 }),
+  changeKind: stringEnum("refactor", "bugfix", "feature", "operational", "mixed"),
+  goal: narrativeSchema,
+  acceptanceCriteria: Type.Array(contractItemSchema, {
+    minItems: 1,
+    maxItems: HIGH_RISK_ITEM_LIMIT,
+  }),
+  protectedInvariants: Type.Array(contractItemSchema, {
+    minItems: 1,
+    maxItems: HIGH_RISK_ITEM_LIMIT,
+  }),
+  nonGoals: Type.Array(nonGoalSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  allowedPathPrefixes: Type.Array(stringSchema, {
+    minItems: 1,
+    maxItems: HIGH_RISK_PATH_LIMIT,
+  }),
   approvalRequiredChanges: stringArraySchema,
   evidenceGaps: stringArraySchema,
-  risks: stringArraySchema,
-  unknowns: stringArraySchema,
+  risks: Type.Array(riskSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  unknowns: Type.Array(unknownSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
 });
 
 const plannedFileSchema = strictObject({ path: stringSchema, purpose: stringSchema });
@@ -82,13 +152,47 @@ const safetyTestSchema = strictObject({
   argv: Type.Array(stringSchema, { minItems: 1 }),
   cwd: Type.String({ minLength: 1, maxLength: 4096 }),
 });
-const planUnknownSchema = strictObject({
+export const detailedPlanSchema = strictObject({
+  planId: stringSchema,
+  lens: stringSchema,
+  title: stringSchema,
+  approach: stringSchema,
+  rationale: stringSchema,
+  acceptanceCoverage: Type.Array(coverageSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  invariantProtection: Type.Array(coverageSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  riskMitigation: Type.Array(coverageSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  files: Type.Array(plannedFileSchema, { minItems: 1, maxItems: HIGH_RISK_PATH_LIMIT }),
+  steps: Type.Array(planStepSchema, { minItems: 1, maxItems: HIGH_RISK_ITEM_LIMIT }),
+  safetyTests: Type.Array(safetyTestSchema, { minItems: 1, maxItems: HIGH_RISK_ITEM_LIMIT }),
+  verificationCommands: Type.Array(commandSchema, { minItems: 1, maxItems: 12 }),
+  dependencies: stringArraySchema,
+  migrations: stringArraySchema,
+  approvalRequiredChanges: stringArraySchema,
+  risks: Type.Array(riskSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  assumptions: stringArraySchema,
+  unknowns: Type.Array(unknownSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
+  recovery: Type.Array(stringSchema, { minItems: 1, maxItems: 6 }),
+  rejectionReasons: stringArraySchema,
+});
+
+const legacyContractItemSchema = strictObject({ id: stringSchema, statement: stringSchema });
+const legacyChangeContractSchema = strictObject({
+  goal: stringSchema,
+  acceptanceCriteria: Type.Array(legacyContractItemSchema, { minItems: 1, maxItems: 12 }),
+  protectedInvariants: Type.Array(legacyContractItemSchema, { minItems: 1, maxItems: 12 }),
+  nonGoals: Type.Array(stringSchema, { maxItems: 12 }),
+  allowedPathPrefixes: Type.Array(stringSchema, { minItems: 1, maxItems: 12 }),
+  approvalRequiredChanges: Type.Array(stringSchema, { maxItems: 12 }),
+  evidenceGaps: Type.Array(stringSchema, { maxItems: 12 }),
+  risks: Type.Array(stringSchema, { maxItems: 12 }),
+  unknowns: Type.Array(stringSchema, { maxItems: 12 }),
+});
+const legacyPlanUnknownSchema = strictObject({
   description: stringSchema,
   critical: Type.Boolean(),
   resolution: Type.String({ maxLength: 400 }),
 });
-
-export const detailedPlanSchema = strictObject({
+const legacyDetailedPlanSchema = strictObject({
   planId: stringSchema,
   lens: stringSchema,
   title: stringSchema,
@@ -100,14 +204,14 @@ export const detailedPlanSchema = strictObject({
   steps: Type.Array(planStepSchema, { minItems: 1, maxItems: 12 }),
   safetyTests: Type.Array(safetyTestSchema, { minItems: 1, maxItems: 12 }),
   verificationCommands: Type.Array(commandSchema, { minItems: 1, maxItems: 6 }),
-  dependencies: stringArraySchema,
-  migrations: stringArraySchema,
-  approvalRequiredChanges: stringArraySchema,
-  risks: stringArraySchema,
-  assumptions: stringArraySchema,
-  unknowns: Type.Array(planUnknownSchema, { maxItems: 8 }),
+  dependencies: Type.Array(stringSchema, { maxItems: 12 }),
+  migrations: Type.Array(stringSchema, { maxItems: 12 }),
+  approvalRequiredChanges: Type.Array(stringSchema, { maxItems: 12 }),
+  risks: Type.Array(stringSchema, { maxItems: 12 }),
+  assumptions: Type.Array(stringSchema, { maxItems: 12 }),
+  unknowns: Type.Array(legacyPlanUnknownSchema, { maxItems: 8 }),
   recovery: Type.Array(stringSchema, { minItems: 1, maxItems: 6 }),
-  rejectionReasons: stringArraySchema,
+  rejectionReasons: Type.Array(stringSchema, { maxItems: 12 }),
 });
 
 const rejectedPlanSchema = strictObject({ planId: stringSchema, reason: stringSchema });
@@ -261,7 +365,10 @@ const runStateSchema = strictObject({
 
 const artifactEnvelopeSchema = strictObject({
   meta: strictObject({
-    artifactVersion: Type.Literal(ARTIFACT_VERSION),
+    artifactVersion: Type.Union([
+      Type.Literal(LEGACY_ARTIFACT_VERSION),
+      Type.Literal(ARTIFACT_VERSION),
+    ]),
     producerVersion: Type.String({ minLength: 1, maxLength: 255 }),
     runId: runIdSchema,
     baselineCommit: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
@@ -278,7 +385,7 @@ const eligibilityFailureSchema = strictObject({ code: stringSchema, message: str
 const planEligibilitySchema = strictObject({
   planId: stringSchema,
   eligible: Type.Boolean(),
-  failures: Type.Array(eligibilityFailureSchema, { maxItems: 12 }),
+  failures: Type.Array(eligibilityFailureSchema, { maxItems: HIGH_RISK_ITEM_LIMIT }),
   humanDecisionReasons: stringArraySchema,
 });
 
@@ -316,12 +423,12 @@ const commandEvidenceSchema = strictObject({
 
 const commandEvidenceListSchema = Type.Array(commandEvidenceSchema, {
   minItems: 1,
-  maxItems: 12,
+  maxItems: HIGH_RISK_ITEM_LIMIT,
 });
 
 const protectedHashesSchema = Type.Record(Type.String(), sha256Schema, {
   minProperties: 1,
-  maxProperties: 32,
+  maxProperties: HIGH_RISK_PATH_LIMIT,
   propertyNames: Type.String({ minLength: 1, maxLength: 4096 }),
 });
 
@@ -445,6 +552,98 @@ export const validateChangeContract = compileArtifactValidator(
   changeContractSchema,
 );
 export const validateDetailedPlan = compileArtifactValidator("detailed plan", detailedPlanSchema);
+const validateLegacyChangeContract = compileArtifactValidator(
+  "legacy change contract",
+  legacyChangeContractSchema,
+);
+const validateLegacyDetailedPlan = compileArtifactValidator(
+  "legacy detailed plan",
+  legacyDetailedPlanSchema,
+);
+
+function migratedEvidenceBasis() {
+  return [
+    {
+      source: "task" as const,
+      detail: "Migrated from an artifact v2 assertion whose finer provenance was not recorded.",
+      references: [],
+    },
+  ];
+}
+
+export function validatePersistedChangeContract(value: unknown, artifactVersion: number) {
+  if (artifactVersion === ARTIFACT_VERSION) return validateChangeContract(value);
+  const legacy = validateLegacyChangeContract(value);
+  const relatedId = legacy.acceptanceCriteria[0]?.id ?? legacy.protectedInvariants[0]?.id ?? "AC1";
+  return validateChangeContract({
+    changeKind: "mixed",
+    goal: legacy.goal,
+    acceptanceCriteria: legacy.acceptanceCriteria.map((item) => ({
+      ...item,
+      evidenceBasis: migratedEvidenceBasis(),
+    })),
+    protectedInvariants: legacy.protectedInvariants.map((item) => ({
+      ...item,
+      evidenceBasis: migratedEvidenceBasis(),
+    })),
+    nonGoals: legacy.nonGoals.map((statement, index) => ({
+      id: `NG${index + 1}`,
+      statement,
+      evidenceBasis: migratedEvidenceBasis(),
+      relatedRiskIds: [],
+    })),
+    allowedPathPrefixes: legacy.allowedPathPrefixes,
+    approvalRequiredChanges: legacy.approvalRequiredChanges,
+    evidenceGaps: legacy.evidenceGaps,
+    risks: legacy.risks.map((statement, index) => ({
+      id: `R${index + 1}`,
+      statement,
+      critical: true,
+      resolutionStatus: "unresolved",
+      resolution: "",
+      relatedIds: [relatedId],
+      evidenceBasis: migratedEvidenceBasis(),
+    })),
+    unknowns: legacy.unknowns.map((statement, index) => ({
+      id: `U${index + 1}`,
+      statement,
+      critical: true,
+      resolutionStatus: "unresolved",
+      resolution: "",
+      relatedIds: [relatedId],
+      evidenceBasis: migratedEvidenceBasis(),
+    })),
+  });
+}
+
+export function validatePersistedDetailedPlan(value: unknown, artifactVersion: number) {
+  if (artifactVersion === ARTIFACT_VERSION) return validateDetailedPlan(value);
+  const legacy = validateLegacyDetailedPlan(value);
+  const relatedId =
+    legacy.acceptanceCoverage[0]?.id ?? legacy.invariantProtection[0]?.id ?? legacy.planId;
+  return validateDetailedPlan({
+    ...legacy,
+    riskMitigation: [],
+    risks: legacy.risks.map((statement, index) => ({
+      id: `PR${index + 1}`,
+      statement,
+      critical: true,
+      resolutionStatus: "unresolved",
+      resolution: "",
+      relatedIds: [relatedId],
+      evidenceBasis: migratedEvidenceBasis(),
+    })),
+    unknowns: legacy.unknowns.map((unknown, index) => ({
+      id: `PU${index + 1}`,
+      statement: unknown.description,
+      critical: unknown.critical,
+      resolutionStatus: unknown.resolution.trim() === "" ? "unresolved" : "resolved",
+      resolution: unknown.resolution,
+      relatedIds: [relatedId],
+      evidenceBasis: migratedEvidenceBasis(),
+    })),
+  });
+}
 export const validateDecisionArtifact = compileArtifactValidator(
   "decision artifact",
   decisionArtifactSchema,

@@ -8,12 +8,17 @@ import {
   evidenceArtifactSchema,
   harnessArtifactSchema,
   implementationArtifactSchema,
+  LEGACY_ARTIFACT_VERSION,
   smokeArtifactSchema,
+  validateChangeContract,
   validateCommandEvidenceList,
+  validateDetailedPlan,
+  validatePersistedDetailedPlan,
   validatePlanEligibilityList,
   validateSmokeArtifact,
   verificationArtifactSchema,
 } from "../src/schemas.js";
+import { validContract, validPlan } from "./support/artifacts.js";
 
 test("accepts a valid structured artifact", () => {
   assert.deepEqual(validateSmokeArtifact({ kind: "smoke", message: "ready" }), {
@@ -81,6 +86,87 @@ test("validates persisted deterministic evidence", () => {
       ]),
     ArtifactValidationError,
   );
+});
+
+test("requires grounded contract assertions and supported non-goals", () => {
+  const missingBasis = structuredClone(validContract()) as Record<string, unknown> & {
+    acceptanceCriteria: Array<Record<string, unknown>>;
+  };
+  delete missingBasis.acceptanceCriteria[0]?.evidenceBasis;
+  assert.throws(() => validateChangeContract(missingBasis), ArtifactValidationError);
+
+  const unsupportedNonGoal = {
+    ...validContract(),
+    nonGoals: [
+      {
+        id: "NG1",
+        statement: "Ignore a plausible preservation failure.",
+        evidenceBasis: [
+          {
+            source: "preservation",
+            detail: "No task or repository basis supports this exclusion.",
+            references: [],
+          },
+        ],
+        relatedRiskIds: ["R1"],
+      },
+    ],
+  };
+  assert.throws(() => validateChangeContract(unsupportedNonGoal), ArtifactValidationError);
+});
+
+test("accepts realistic high-risk artifact sizes without truncation", () => {
+  const criteria = Array.from({ length: 24 }, (_, index) => ({
+    id: `AC${index + 1}`,
+    statement: `Observable requirement ${index + 1}.`,
+    evidenceBasis: [
+      { source: "task" as const, detail: "Explicit task requirement.", references: [] },
+    ],
+  }));
+  const contract = validateChangeContract(
+    validContract({
+      acceptanceCriteria: criteria,
+      allowedPathPrefixes: Array.from({ length: 24 }, (_, index) => `package-${index + 1}`),
+      risks: Array.from({ length: 24 }, (_, index) => ({
+        id: `R${index + 1}`,
+        statement: `Risk ${index + 1}.`,
+        critical: index === 0,
+        resolutionStatus: "unresolved" as const,
+        resolution: "",
+        relatedIds: [criteria[index]?.id ?? "AC1"],
+        evidenceBasis: [
+          { source: "task" as const, detail: "Risk follows from the task.", references: [] },
+        ],
+      })),
+    }),
+  );
+  const plan = validateDetailedPlan(
+    validPlan({
+      acceptanceCoverage: criteria.map((item) => ({ id: item.id, strategy: "Verify it." })),
+      files: Array.from({ length: 24 }, (_, index) => ({
+        path: `package-${index + 1}/value.ts`,
+        purpose: "Bounded change.",
+      })),
+    }),
+  );
+
+  assert.equal(contract.acceptanceCriteria.length, 24);
+  assert.equal(contract.risks.length, 24);
+  assert.equal(plan.files.length, 24);
+});
+
+test("normalizes legacy plan unknowns through the artifact v2 compatibility path", () => {
+  const current = validPlan();
+  const legacy = {
+    ...current,
+    risks: ["Legacy risk."],
+    unknowns: [{ description: "Legacy question.", critical: true, resolution: "" }],
+  } as Record<string, unknown>;
+  delete legacy.riskMitigation;
+  const migrated = validatePersistedDetailedPlan(legacy, LEGACY_ARTIFACT_VERSION);
+
+  assert.equal(migrated.risks[0]?.id, "PR1");
+  assert.equal(migrated.unknowns[0]?.resolutionStatus, "unresolved");
 });
 
 function assertStrictObjectPropertiesRequired(value: unknown): void {

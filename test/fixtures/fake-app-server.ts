@@ -266,13 +266,72 @@ async function structuredOutput(prompt: string): Promise<unknown> {
   if (prompt.includes("[CHANGESAFELY_ROLE:contract]")) {
     return validContract({
       goal: "Add the requested behavior with a minimal verified change.",
-      acceptanceCriteria: [{ id: "AC1", statement: "Requested behavior is observable." }],
-      protectedInvariants: [{ id: "INV1", statement: "Public API remains stable." }],
-      nonGoals: ["No dependency changes."],
+      acceptanceCriteria: [
+        {
+          id: "AC1",
+          statement: "Requested behavior is observable.",
+          evidenceBasis: [
+            { source: "task", detail: "The requested behavior is explicit.", references: [] },
+          ],
+        },
+      ],
+      protectedInvariants: [
+        {
+          id: "INV1",
+          statement: "Public API remains stable.",
+          evidenceBasis: [
+            {
+              source: "preservation",
+              detail: "The current public API is used by the fixture.",
+              references: [
+                {
+                  path: target?.sources[0]?.path ?? "src/value.ts",
+                  detail: "Existing public function.",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      nonGoals: [
+        {
+          id: "NG1",
+          statement: "No dependency changes.",
+          evidenceBasis: [
+            { source: "task", detail: "The task requires only local behavior.", references: [] },
+          ],
+          relatedRiskIds: [],
+        },
+      ],
       approvalRequiredChanges: ["New production dependencies"],
       evidenceGaps: ["Acceptance test is missing."],
-      risks: ["Behavioral regression."],
       allowedPathPrefixes: target?.allowedPathPrefixes ?? ["src", "test"],
+      ...(mode === "critical-contract-unknown"
+        ? {
+            unknowns: [
+              {
+                id: "U1",
+                statement: "The required failure behavior cannot be determined.",
+                critical: true,
+                resolutionStatus: "unresolved" as const,
+                resolution: "",
+                relatedIds: ["AC1"],
+                evidenceBasis: [
+                  {
+                    source: "repository" as const,
+                    detail: "The repository exposes conflicting behavior.",
+                    references: [
+                      {
+                        path: target?.sources[0]?.path ?? "src/value.ts",
+                        detail: "The unresolved behavior boundary.",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          }
+        : {}),
     });
   }
   if (prompt.includes("[CHANGESAFELY_ROLE:planner]")) {

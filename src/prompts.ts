@@ -49,9 +49,9 @@ export function contractPrompt(task: string, evidence: EvidenceArtifact): string
 
 Objective: define the observable safe change and the behavior that must remain intact from a clean C0 root.
 
-Directions: use only the user task and validated evidence. Give every acceptance criterion and protected invariant a stable unique id. Separate the required delta, preservation, non-goals, risks, evidence gaps, approval-sensitive changes, and unresolved semantics. Ground every non-obvious assertion in the task or evidence. allowedPathPrefixes constrain later writes, never read-only inspection.
+Directions: use only the user task and validated evidence. Classify changeKind. Give criteria, invariants, non-goals, risks, and unknowns stable unique ids; connect risks and unknowns through relatedIds. Give every assertion a concise task, repository, or preservation evidenceBasis with repository references where required. Record criticality and resolution status without treating an unresolved risk as resolved. allowedPathPrefixes constrain later writes, never read-only inspection.
 
-Boundary: work read-only and network-off. Do not convert a plausible safety failure into a non-goal or invent semantics to resolve uncertainty. Surface critical ambiguity explicitly.
+Boundary: work read-only and network-off. Do not convert a plausible safety failure into a non-goal, invent semantics, or omit material evidence to fit a schema bound. Surface the resulting critical uncertainty explicitly.
 
 Output: return only the schema-constrained Change Contract.
 
@@ -72,9 +72,9 @@ export function plannerPrompt(
 
 Objective: as independent planner ${planId}, whose lens is: ${lens}, produce one self-contained admissible plan with the strongest practical evidence and smallest sufficient production delta.
 
-Directions: cover every contract id, declare all planned paths and sensitive changes, and make risks, assumptions, unknowns, recovery, and rejection reasons explicit. ${RISK_DIRECTIONS} Select every safety and verification command verbatim by argv and cwd from the capability catalog; safety tests must select kind test. Record only actual new dependencies, migrations, and approval-sensitive changes. Materially apply the assigned lens without expanding scope for variety.
+Directions: map every criterion and invariant once and every critical risk in riskMitigation; preserve stable ids and evidence relationships for plan risks and unknowns. Declare all planned write paths and sensitive changes. ${RISK_DIRECTIONS} Select every safety and verification command verbatim by argv and cwd from the capability catalog; safety tests must select kind test. Record only actual new dependencies, migrations, and approval-sensitive changes. Materially apply the assigned lens without expanding scope for variety.
 
-Boundary: work read-only. Do not edit files or invent command authority. If the lens cannot produce a safe admissible plan, say why in rejectionReasons rather than disguising the gap.
+Boundary: work read-only. Do not edit files, invent command authority, or omit material evidence to fit a schema bound. If the lens cannot produce a safe admissible plan, say why in rejectionReasons rather than disguising the gap.
 
 Output: set planId to ${planId}, lens to ${lens}, and return only the schema-constrained Detailed Plan.
 
@@ -98,7 +98,7 @@ export function plannerCorrectionPrompt(
 
 Objective: as the same planner ${planId}, whose lens is: ${lens}, correct the rejected artifact once.
 
-Directions: address only the deterministic gate feedback while preserving genuine risks and sensitive changes. Questions belong in unknowns. Approval-required changes contain only changes this plan actually performs. Commands must remain verbatim catalog argv/cwd values and safety tests must select kind test.
+Directions: address only the deterministic gate feedback while preserving genuine risks, ids, evidence relationships, and sensitive changes. Questions belong in unknowns with explicit resolution status. Approval-required changes contain only changes this plan actually performs. Commands must remain verbatim catalog argv/cwd values and safety tests must select kind test.
 
 Boundary: work read-only. Do not broaden scope, hide uncertainty, or edit files. If the plan remains unsafe, preserve the blocking reason.
 

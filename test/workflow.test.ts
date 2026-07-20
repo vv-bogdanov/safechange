@@ -82,6 +82,28 @@ test("blocks before App Server work when tracked state is dirty", async (t) => {
   );
 });
 
+test("blocks an unresolved critical contract before planners or a write branch", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const baselineBranch = await git(repoPath, ["branch", "--show-current"]);
+  const result = await runPlanning({
+    repoPath,
+    task: "Change the fixture value only if failure behavior is known.",
+    plannerCount: 3,
+    clientFactory: fakeAppServerFactory(repoPath, "critical-contract-unknown"),
+  });
+
+  assert.equal(result.status, "BLOCKED");
+  assert.match(result.reason, /UNRESOLVED_CRITICAL_CONTRACT_UNKNOWN/u);
+  const state = await readRunState(result.runPath);
+  assert.equal(state.phase, "planning-complete");
+  assert.equal(state.branch, "");
+  assert.equal(
+    state.contexts.some((entry) => entry.role.startsWith("planner:")),
+    false,
+  );
+  assert.equal(await git(repoPath, ["branch", "--show-current"]), baselineBranch);
+});
+
 test("corrects one planner artifact in the same fork before Judge", async (t) => {
   const repoPath = await fixtureRepo(t);
   const result = await runPlanning({

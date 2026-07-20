@@ -13,7 +13,12 @@ import {
   type RunState,
   validateRunId,
 } from "../src/artifacts.js";
-import { ARTIFACT_VERSION, RUN_STATE_VERSION, RunStateInvariantError } from "../src/schemas.js";
+import {
+  ARTIFACT_VERSION,
+  LEGACY_ARTIFACT_VERSION,
+  RUN_STATE_VERSION,
+  RunStateInvariantError,
+} from "../src/schemas.js";
 import { VERSION } from "../src/version.js";
 import { validContract, validEvidence } from "./support/artifacts.js";
 
@@ -167,6 +172,50 @@ test("reports unsupported artifact versions before envelope validation", async (
   }
 });
 
+test("loads and normalizes a hash-verified artifact v2 contract", async (t) => {
+  const repoPath = await mkdtemp(join(tmpdir(), "changesafely-envelope-v2-"));
+  t.after(async () => rm(repoPath, { recursive: true, force: true }));
+  const store = new ArtifactStore(repoPath, "safe-run", baselineCommit);
+  await store.initialize();
+  const state = validState(repoPath);
+  const evidence = await store.writeArtifact("evidence", "discovery", validEvidence());
+  state.artifacts.evidence = evidence.hash;
+  const current = validContract();
+  const legacyPayload = {
+    goal: current.goal,
+    acceptanceCriteria: current.acceptanceCriteria.map(({ id, statement }) => ({ id, statement })),
+    protectedInvariants: current.protectedInvariants.map(({ id, statement }) => ({
+      id,
+      statement,
+    })),
+    nonGoals: [],
+    allowedPathPrefixes: current.allowedPathPrefixes,
+    approvalRequiredChanges: [],
+    evidenceGaps: [],
+    risks: ["Legacy regression risk."],
+    unknowns: ["Legacy unresolved behavior."],
+  };
+  const content = `${JSON.stringify({
+    meta: {
+      artifactVersion: LEGACY_ARTIFACT_VERSION,
+      producerVersion: "0.1.0",
+      runId: state.runId,
+      baselineCommit,
+      role: "contract",
+      createdAt: "2026-07-19T00:00:00.000Z",
+      inputs: { evidence: evidence.hash },
+    },
+    payload: legacyPayload,
+  })}\n`;
+  await store.writeText("contract.json", content);
+  state.artifacts.contract = createHash("sha256").update(content).digest("hex");
+
+  const loaded = (await loadVerifiedArtifact(repoPath, state, "contract")).payload;
+  assert.equal(loaded.changeKind, "mixed");
+  assert.equal(loaded.risks[0]?.critical, true);
+  assert.equal(loaded.unknowns[0]?.resolutionStatus, "unresolved");
+});
+
 test("binds artifact lineage to named predecessors", async (t) => {
   const repoPath = await mkdtemp(join(tmpdir(), "changesafely-input-lineage-"));
   t.after(async () => rm(repoPath, { recursive: true, force: true }));
@@ -180,8 +229,6 @@ test("binds artifact lineage to named predecessors", async (t) => {
     "contract",
     validContract({
       goal: "Make the requested change",
-      acceptanceCriteria: [{ id: "AC1", statement: "Behavior is observable" }],
-      protectedInvariants: [{ id: "INV1", statement: "API stays stable" }],
       allowedPathPrefixes: ["src"],
     }),
     artifactInputs(state, "evidence"),

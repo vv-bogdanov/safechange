@@ -8,6 +8,7 @@ import {
   loadRunState,
   loadSelectedPlanArtifacts,
 } from "./artifacts.js";
+import { evaluateContract, evaluatePlan } from "./eligibility.js";
 import { abortReason, ChangeSafelyError } from "./errors.js";
 import {
   assertProtectedConfigurationUnchanged,
@@ -131,15 +132,33 @@ export async function runHarness(options: HarnessOptions): Promise<HarnessResult
   }
 
   const { contract, decision, plan } = await loadSelectedPlanArtifacts(repoPath, state);
+  const store = new ArtifactStore(repoPath, state.runId, state.baselineCommit, {
+    ...(options.diagnostics ? { diagnostics: true } : {}),
+  });
+  const contractFailures = evaluateContract(contract);
+  const planGate = evaluatePlan(contract, plan, capabilities);
+  if (contractFailures.length > 0 || !planGate.eligible) {
+    const reasons = [
+      ...contractFailures.map((failure) => `${failure.code}: ${failure.message}`),
+      ...(contractFailures.length === 0
+        ? planGate.failures.map((failure) => `${failure.code}: ${failure.message}`)
+        : []),
+      ...planGate.humanDecisionReasons,
+    ];
+    state.status = "BLOCKED";
+    state.phase = "write-preflight-blocked";
+    state.reason = reasons.join("; ");
+    state.nextAction = "Resolve the contract or selected-plan gate and start a new planning run.";
+    await store.writeState(state);
+    reportProgress(options.onProgress, state.runId, state.phase, state.reason, startedAt);
+    throw harnessError("WRITE_ELIGIBILITY_FAILED", state.reason, 2);
+  }
   const allowedTestPaths = selectedTestPaths(plan, capabilities);
   const contractContext = state.contexts.find((entry) => entry.role === "contract");
   if (!contractContext?.turnId) {
     throw harnessError("CANONICAL_CONTEXT_MISSING", "Canonical C0 checkpoint is missing", 2);
   }
 
-  const store = new ArtifactStore(repoPath, state.runId, state.baselineCommit, {
-    ...(options.diagnostics ? { diagnostics: true } : {}),
-  });
   let branch: string;
   try {
     branch = await createChangeSafelyBranch(baseline, state.runId);

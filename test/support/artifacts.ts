@@ -15,14 +15,51 @@ export function validEvidence(overrides: Partial<EvidenceArtifact> = {}): Eviden
 
 export function validContract(overrides: Partial<ChangeContract> = {}): ChangeContract {
   return {
+    changeKind: "feature",
     goal: "Change behavior",
-    acceptanceCriteria: [{ id: "AC1", statement: "Behavior changes" }],
-    protectedInvariants: [{ id: "INV1", statement: "API is stable" }],
+    acceptanceCriteria: [
+      {
+        id: "AC1",
+        statement: "Behavior changes",
+        evidenceBasis: [
+          { source: "task", detail: "The requested behavior is explicit.", references: [] },
+        ],
+      },
+    ],
+    protectedInvariants: [
+      {
+        id: "INV1",
+        statement: "API is stable",
+        evidenceBasis: [
+          {
+            source: "preservation",
+            detail: "The existing export is a public boundary.",
+            references: [{ path: "src/value.ts", detail: "Existing exported signature." }],
+          },
+        ],
+      },
+    ],
     nonGoals: [],
     allowedPathPrefixes: ["src", "test"],
     approvalRequiredChanges: [],
     evidenceGaps: [],
-    risks: [],
+    risks: [
+      {
+        id: "R1",
+        statement: "Local behavior may regress.",
+        critical: true,
+        resolutionStatus: "unresolved",
+        resolution: "",
+        relatedIds: ["AC1", "INV1"],
+        evidenceBasis: [
+          {
+            source: "repository",
+            detail: "The implementation serves both required and preserved behavior.",
+            references: [{ path: "src/value.ts", detail: "Shared implementation boundary." }],
+          },
+        ],
+      },
+    ],
     unknowns: [],
     ...overrides,
   };
@@ -37,6 +74,7 @@ export function validPlan(overrides: Partial<DetailedPlan> = {}): DetailedPlan {
     rationale: "The change is direct and bounded.",
     acceptanceCoverage: [{ id: "AC1", strategy: "Add an acceptance test." }],
     invariantProtection: [{ id: "INV1", strategy: "Keep the exported signature." }],
+    riskMitigation: [{ id: "R1", strategy: "Exercise the old and requested behavior." }],
     files: [
       { path: "test/value.test.ts", purpose: "Acceptance coverage" },
       { path: "src/value.ts", purpose: "Implementation" },
@@ -56,7 +94,23 @@ export function validPlan(overrides: Partial<DetailedPlan> = {}): DetailedPlan {
     dependencies: [],
     migrations: [],
     approvalRequiredChanges: [],
-    risks: ["Local behavior may change."],
+    risks: [
+      {
+        id: "PR1",
+        statement: "The local implementation may affect both behaviors.",
+        critical: false,
+        resolutionStatus: "unresolved",
+        resolution: "",
+        relatedIds: ["AC1", "INV1"],
+        evidenceBasis: [
+          {
+            source: "repository",
+            detail: "Both behaviors share the implementation boundary.",
+            references: [{ path: "src/value.ts", detail: "Planned production edit." }],
+          },
+        ],
+      },
+    ],
     assumptions: [],
     unknowns: [],
     recovery: ["Revert the implementation commit."],

@@ -218,3 +218,19 @@ unresolved critical semantics stop the workflow.
 
 **Why:** generic requests for maximal safety can otherwise create invented test oracles. Wide risk
 discovery and strict assertion provenance are both required for a trustworthy harness.
+
+## AD-31. Traceable contracts fail closed before writes
+
+**Decision:** criteria, invariants, risks, and unknowns use stable IDs, evidence bases, explicit
+relationships, criticality, and resolution status. Deterministic gates reject duplicate or unknown
+references, missing critical-risk mitigation, and unresolved critical unknowns before creating a
+write branch. Contract path prefixes constrain planned writes, not read-only discovery or
+verification.
+
+**Why:** model booleans and prose lists cannot prove that a selected plan covers the actual safety
+contract. Explicit relationships make omissions inspectable while leaving semantic exploration to
+the roles.
+
+**Compatibility:** new artifacts use format v3. Hash-verified v2 contracts and plans are normalized
+for reading; missing provenance is labeled as migrated, and legacy unknowns remain critical and
+unresolved instead of receiving an invented resolution.

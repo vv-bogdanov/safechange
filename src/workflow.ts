@@ -2,7 +2,12 @@ import { resolve } from "node:path";
 import { AppServerClient } from "./app-server/client.js";
 import { type ArtifactKey, type PlanArtifactKey, planArtifactKey } from "./artifact-key.js";
 import { ArtifactStore, artifactInputs, createRunId, type RunState } from "./artifacts.js";
-import { evaluatePlan, evaluatePlans, type PlanEligibility } from "./eligibility.js";
+import {
+  evaluateContract,
+  evaluatePlan,
+  evaluatePlans,
+  type PlanEligibility,
+} from "./eligibility.js";
 import { abortReason, ChangeSafelyError } from "./errors.js";
 import { assertBaselineUnchanged, canonicalRepositoryPath, inspectBaseline } from "./git.js";
 import { createRunOutcome, type RunOutcome } from "./outcome.js";
@@ -227,6 +232,37 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
     );
     addArtifact("contract", contractStored.hash);
     await store.writeState(state);
+
+    const contractFailures = evaluateContract(contractArtifact);
+    if (contractFailures.length > 0) {
+      state.status = "BLOCKED";
+      state.reason = contractFailures
+        .map((failure) => `${failure.code}: ${failure.message}`)
+        .join("; ");
+      state.nextAction =
+        "Resolve the contract evidence or critical uncertainty and start a new run.";
+      await assertBaselineUnchanged(baseline);
+      state.phase = "planning-complete";
+      await store.writeState(state);
+      reportProgress(
+        options.onProgress,
+        runId,
+        state.phase,
+        "Contract blocked planning",
+        startedAt,
+      );
+      const reportPath = await store.writeText(
+        "report.md",
+        planningReport(state, plans, eligibility, decision),
+      );
+      await store.trace.append({
+        component: "workflow",
+        event: "run.completed",
+        status: "blocked",
+        phase: state.phase,
+      });
+      return await createRunOutcome(repoPath, state, reportPath);
+    }
 
     await persist("planners");
     const plannerRuns: Array<() => Promise<{ planId: PlanArtifactKey; plan: DetailedPlan }>> = [];

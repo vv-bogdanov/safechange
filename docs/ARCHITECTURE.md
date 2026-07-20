@@ -106,8 +106,10 @@ allowed only after planning, T1, or independent verification. Before reuse,
 ChangeSafely checks persisted-format versions before full schema validation, the closed
 phase/status contract, named artifact inputs, artifact hashes and schemas, role
 lineage, Git branch and HEAD, baseline ancestry, protected configuration metadata,
-and T1 hashes. Unknown state or artifact versions fail closed; migrations are added
-only when a second supported persisted format exists.
+and T1 hashes. Unknown state or artifact versions fail closed. Artifact format v3 adds
+traceable contracts and plans; hash-verified v2 contracts and plans remain readable through
+an explicit conservative normalization. Their unstructured unknowns remain unresolved and
+their write eligibility is rechecked before a branch is created.
 
 Each run also has `trace.jsonl`, a versioned append-only sequence written through one
 serialized `TraceWriter`. It correlates phase and state transitions, role turns,

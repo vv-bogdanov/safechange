@@ -144,6 +144,9 @@ test("role prompts keep broad reasoning and narrow action boundaries", () => {
   assert.match(values.contract ?? "", /constrain later writes, never read-only inspection/u);
   assert.match(values.contract ?? "", /Classify changeKind/u);
   assert.match(values.contract ?? "", /bounded by a conservative executable policy/u);
+  assert.match(values.contract ?? "", /safest local policy/u);
+  assert.match(values.contract ?? "", /implementation-mechanism uncertainty/u);
+  assert.match(values.contract ?? "", /remaining decision is human or external/u);
   assert.match(
     values.contract ?? "",
     /speculative external detail alone is not a critical unknown/u,

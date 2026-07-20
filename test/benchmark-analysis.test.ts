@@ -183,6 +183,48 @@ test("reports verified attempts whose versioned mutation analysis is unavailable
   assert.equal(report.comparisons[0]?.runs[0]?.candidateTests, null);
 });
 
+test("reports blocked ChangeSafely status separately from unsafe candidate snapshot", async (t) => {
+  const resultsRoot = await mkdtemp(join(tmpdir(), "changesafely-blocked-report-"));
+  t.after(async () => rm(resultsRoot, { recursive: true, force: true }));
+  const run = benchmarkRunDocument("blocked-run", {
+    mode: "changesafely",
+    outcome: "unsafe_green",
+  });
+  await createEvidencePackage(resultsRoot, run, {
+    "comparison.json": benchmarkComparisonContent(run),
+    "diff.patch": "",
+    "events.jsonl": '{"type":"synthetic"}\n',
+    "changesafely/outcome.json": `${JSON.stringify({
+      runId: run.runId,
+      status: "BLOCKED",
+      reason: "Synthetic safe stop before planning.",
+      nextAction: "Resolve the contract uncertainty.",
+    })}\n`,
+    "evaluation.json": `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        scenario: "double-charge",
+        checks: [{ id: "synthetic", category: "visible", passed: true, detail: "passed" }],
+        summary: { visible: true, acceptance: false, preservation: true, scope: true },
+        passed: false,
+      },
+      null,
+      2,
+    )}\n`,
+  });
+
+  const replay = await replayBenchmarkRun(resultsRoot, run.runId);
+  assert.equal(replay.caseCard.outcome, "unsafe_green");
+  assert.equal(replay.caseCard.unsafeGreen, true);
+  assert.equal(replay.caseCard.safeTaskSuccess, false);
+  assert.equal(replay.caseCard.productStatus, "BLOCKED");
+
+  const report = await buildBenchmarkReport(resultsRoot);
+  const caseCard = report.comparisons[0]?.runs[0];
+  assert.equal(caseCard?.outcome, "unsafe_green");
+  assert.equal(caseCard?.productStatus, "BLOCKED");
+});
+
 async function benchmarkCli<Value>(args: string[]): Promise<Value> {
   const { stdout } = await execFileAsync(
     process.execPath,

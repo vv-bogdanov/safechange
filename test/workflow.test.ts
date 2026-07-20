@@ -114,9 +114,12 @@ test("blocks an unresolved critical contract before planners or a write branch",
 
   assert.equal(result.status, "BLOCKED");
   assert.match(result.reason, /UNRESOLVED_CRITICAL_CONTRACT_UNKNOWN/u);
+  assert.doesNotMatch(result.reason, /VERIFIED/u);
   const state = await readRunState(result.runPath);
   assert.equal(state.phase, "planning-complete");
+  assert.equal(state.status, "BLOCKED");
   assert.equal(state.branch, "");
+  assert.equal(state.artifacts.decision, undefined);
   assert.equal(
     state.contexts.some((entry) => entry.role.startsWith("planner:")),
     false,

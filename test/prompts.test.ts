@@ -166,7 +166,11 @@ test("role prompts keep broad reasoning and narrow action boundaries", () => {
   assert.match(values.judge ?? "", /strongest executable evidence/u);
   assert.match(values["test-author:characterization"] ?? "", /characterization harness/u);
   assert.match(values["test-author:characterization"] ?? "", /non-interference/u);
+  assert.match(values["test-author:characterization"] ?? "", /coveredCriteriaIds only/u);
+  assert.match(values["test-author:characterization"] ?? "", /non-goals are explanatory/u);
   assert.match(values["test-author:change"] ?? "", /same Test Author from accepted C1/u);
+  assert.match(values["test-author:change"] ?? "", /coveredInvariantIds only/u);
+  assert.match(values["test-author:change"] ?? "", /coveredRiskIds only/u);
   assert.match(values["test-author:change"] ?? "", /partial failure/u);
   assert.match(
     values["test-author:change"] ?? "",

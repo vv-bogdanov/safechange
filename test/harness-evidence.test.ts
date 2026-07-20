@@ -84,6 +84,39 @@ test("rejects missing and unknown harness relationships", () => {
   );
 });
 
+test("rejects harness ids placed in the wrong coverage bucket", () => {
+  const contract = validContract({
+    nonGoals: [
+      {
+        id: "NG1",
+        statement: "Do not change deployment behavior.",
+        evidenceBasis: [
+          { source: "task", detail: "The task is repository-local.", references: [] },
+        ],
+        relatedRiskIds: ["R1"],
+      },
+    ],
+  });
+  const harness = validHarness();
+  const check = harness.checks[0];
+  assert.ok(check);
+  check.coveredCriteriaIds = ["INV1", "NG1"];
+  check.coveredInvariantIds = ["AC1"];
+  check.coveredRiskIds = ["NG1"];
+
+  assert.deepEqual(
+    evaluateHarnessEvidence(contract, validPlan(), harness, { stage: "characterization" }).map(
+      (failure) => failure.code,
+    ),
+    [
+      "UNKNOWN_HARNESS_CRITERION",
+      "UNKNOWN_HARNESS_INVARIANT",
+      "UNKNOWN_HARNESS_RISK",
+      "MISSING_HARNESS_INVARIANT",
+    ],
+  );
+});
+
 test("requires an executable non-interference assertion when shared state is applicable", () => {
   const harness = validHarness({
     nonInterference: {

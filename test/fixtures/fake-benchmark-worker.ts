@@ -161,6 +161,14 @@ if (mode === "direct") {
     })}\n`,
   );
   process.exitCode = 1;
+} else if (mode === "changesafely-invalid-output") {
+  const task = option("--task");
+  requireValue(task === expectedTask, "ChangeSafely task bytes differ");
+  requireValue(args.includes("--diagnostics"), "ChangeSafely diagnostics flag is missing");
+  await writeCandidate("changesafely");
+  process.stdout.write("not a JSON outcome, but still useful local diagnostics\n");
+  process.stderr.write("fake app server stderr diagnostic\n");
+  process.exitCode = 1;
 } else {
   throw new Error(`unknown fake benchmark mode: ${mode}`);
 }

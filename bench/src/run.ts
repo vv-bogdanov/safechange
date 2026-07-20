@@ -318,6 +318,7 @@ async function parseAdapterEvidence(
       },
     };
   } catch {
+    const files = invalidRuntimeEvidence(mode, worker);
     return {
       valid: false,
       acceptsNonzeroExit: false,
@@ -325,11 +326,32 @@ async function parseAdapterEvidence(
         type: "runtime.evidence.invalid",
         stdoutBytes: worker.stdoutBytes,
         stdoutSha256: worker.stdoutSha256,
+        stderrBytes: worker.stderrBytes,
+        stderrSha256: worker.stderrSha256,
       })}\n`,
       usage: emptyUsage,
-      files: {},
+      files,
     };
   }
+}
+
+function invalidRuntimeEvidence(
+  mode: BenchmarkMode,
+  worker: ProcessResult,
+): Record<string, string> {
+  if (mode !== "changesafely") return {};
+  const files: Record<string, string> = {};
+  if (worker.stdoutBytes > 0 && !worker.stdoutTruncated) {
+    files["changesafely/invalid-stdout.txt"] = worker.stdout.endsWith("\n")
+      ? worker.stdout
+      : `${worker.stdout}\n`;
+  }
+  if (worker.stderrBytes > 0 && !worker.stderrTruncated) {
+    files["changesafely/invalid-stderr.txt"] = worker.stderr.endsWith("\n")
+      ? worker.stderr
+      : `${worker.stderr}\n`;
+  }
+  return files;
 }
 
 async function pathExists(path: string): Promise<boolean> {

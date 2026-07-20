@@ -296,6 +296,63 @@ test("controller preserves nonzero ChangeSafely outcomes when trace is unavailab
   );
 });
 
+test("controller preserves invalid ChangeSafely process diagnostics locally", async (t) => {
+  const resultsRoot = await temporaryWorkspace(t, "changesafely-invalid-output-");
+  const common = {
+    projectRoot: process.cwd(),
+    benchRoot: join(process.cwd(), "bench"),
+    resultsRoot,
+    scenario: "double-charge",
+    measurement: "development" as const,
+    model: "gpt-5.3-codex-spark",
+    effort: "medium",
+    timeoutMs: 10_000,
+    codexCommand: process.execPath,
+    isolationProof: {
+      provider: "codex-permission-profile" as const,
+      providerVersion: "test",
+      permissionProfile: "changesafely-benchmark",
+      canarySha256: "d".repeat(64),
+      controllerPathHidden: true,
+      authUnreadable: true,
+      canaryPathHidden: true,
+      agentToolNetworkDisabled: true,
+    },
+  };
+  await runBenchmarkAttempt({
+    ...common,
+    mode: "direct",
+    directCommand: { program: process.execPath, prefixArgs: [fixture, "direct"] },
+  });
+
+  const changesafely = await runBenchmarkAttempt({
+    ...common,
+    mode: "changesafely",
+    changeSafelyCommand: {
+      program: process.execPath,
+      prefixArgs: [fixture, "changesafely-invalid-output"],
+    },
+  });
+
+  assert.equal(changesafely.run.outcome, "technical_failure");
+  assert.match(
+    await readFile(join(changesafely.path, "events.jsonl"), "utf8"),
+    /runtime\.evidence\.invalid/u,
+  );
+  assert.match(
+    (await readVerifiedEvidenceFile(changesafely, "changesafely/invalid-stdout.txt")).toString(
+      "utf8",
+    ),
+    /not a JSON outcome/u,
+  );
+  assert.match(
+    (await readVerifiedEvidenceFile(changesafely, "changesafely/invalid-stderr.txt")).toString(
+      "utf8",
+    ),
+    /fake app server stderr/u,
+  );
+});
+
 async function temporaryWorkspace(t: test.TestContext, prefix: string): Promise<string> {
   const path = await mkdtemp(join(tmpdir(), prefix));
   t.after(async () => rm(path, { recursive: true, force: true }));

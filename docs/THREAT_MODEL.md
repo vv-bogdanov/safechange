@@ -41,8 +41,8 @@ operating-system sandbox.
   cleans, amends, or rewrites user history.
 - D0 and C0 are separate roots; decision and write roles fork from C0 and exchange
   schema-validated artifacts rather than hidden transcripts.
-- Only one writer runs at a time. T1 is committed before production code and every
-  protected T1 path is hash-checked through implementation and verification.
+- Only one writer runs at a time. C1 and optional T1 are committed before production code, and
+  every protected path from both stages is hash-checked through implementation and verification.
 - Repository commands use structured argv, `shell: false`, a sanitized environment,
   timeouts, bounded captured output, an allowlist, and a network-disabled Codex
   sandbox. Real exit codes are persisted.

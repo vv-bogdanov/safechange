@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  changeHarnessPrompt,
   contractPrompt,
   discoveryPrompt,
   HIGH_ASSURANCE_DOCTRINE,
@@ -57,7 +58,35 @@ function prompts(): Record<string, string> {
     ),
     judge: judgePrompt(contract, [plan], [eligibility]),
     "judge-correction": judgeCorrectionPrompt(contract, [plan], [eligibility], decision),
-    "test-author": testAuthorPrompt(contract, plan, decision, ["test"], capabilities),
+    "test-author:characterization": testAuthorPrompt(
+      contract,
+      plan,
+      decision,
+      ["test"],
+      capabilities,
+    ),
+    "test-author:change": changeHarnessPrompt(
+      contract,
+      plan,
+      decision,
+      "c1",
+      {
+        summary: "Characterization",
+        testPaths: ["test/value.characterization.test.ts"],
+        fixturePaths: [],
+        targetedCommand: {
+          name: "test",
+          argv: ["npm", "test"],
+          cwd: ".",
+          purpose: "Characterize",
+        },
+        expectedBaselineOutcome: "pass",
+        expectedFailure: "No failure expected.",
+        protectedPaths: ["test/value.characterization.test.ts"],
+      },
+      ["test"],
+      capabilities,
+    ),
     implementer: implementerPrompt(contract, plan, decision, "t1", ["test/value.test.ts"]),
     verifier: verifierPrompt({
       contract,
@@ -97,8 +126,12 @@ test("role prompts keep broad reasoning and narrow action boundaries", () => {
   assert.match(values.planner ?? "", /smallest sufficient production delta/u);
   assert.match(values.planner ?? "", /critical risk in riskMitigation/u);
   assert.match(values.judge ?? "", /strongest executable evidence/u);
-  assert.match(values["test-author"] ?? "", /strongest available pre-implementation/u);
-  assert.match(values["test-author"] ?? "", /stop rather than invent an unsupported oracle/iu);
+  assert.match(values["test-author:characterization"] ?? "", /characterization harness/u);
+  assert.match(values["test-author:change"] ?? "", /same Test Author from accepted C1/u);
+  assert.match(
+    values["test-author:change"] ?? "",
+    /stop rather than invent an unsupported oracle/iu,
+  );
   assert.match(values.implementer ?? "", /smallest sufficient production delta/u);
   assert.match(values.verifier ?? "", /try to falsify/u);
   assert.match(values.verifier ?? "", /plausible green-but-wrong/u);

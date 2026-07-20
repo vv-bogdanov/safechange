@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, writeFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test, { type TestContext } from "node:test";
 import { PreflightError } from "../src/git.js";
@@ -25,6 +25,19 @@ async function fixtureRepo(
       "src/value.ts": "export const value = 1;\n",
     },
   });
+}
+
+async function waitFor(path: string, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await access(path);
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  throw new Error(`Timed out waiting for ${path}`);
 }
 
 test("runs D0 and C0 as roots and decision roles as C0 forks", async (t) => {
@@ -138,7 +151,7 @@ test("corrects one Judge decision in the same fork before planning completes", a
   assert.equal(correction?.checkpointTurnId, judge?.turnId);
 });
 
-test("creates a failing-first safety harness on a branch and commits T1", async (t) => {
+test("commits separate baseline-green C1 and baseline-red T1 harnesses", async (t) => {
   const repoPath = await fixtureRepo(t);
   const clientFactory = fakeAppServerFactory(repoPath);
   const baseline = await git(repoPath, ["rev-parse", "HEAD"]);
@@ -157,19 +170,133 @@ test("creates a failing-first safety harness on a branch and commits T1", async 
 
   assert.match(harness.branch, /^changesafely\//);
   assert.equal(harness.command.exitCode, 1);
-  assert.deepEqual(Object.keys(harness.protectedHashes), ["test/value.test.ts"]);
+  assert.deepEqual(Object.keys(harness.protectedHashes), [
+    "test/value.characterization.test.ts",
+    "test/value.test.ts",
+  ]);
   assert.equal(
-    await git(repoPath, ["diff", "--name-only", baseline, harness.testCommit]),
+    await git(repoPath, ["diff", "--name-only", baseline, harness.characterizationCommit]),
+    "test/value.characterization.test.ts",
+  );
+  assert.equal(
+    await git(repoPath, [
+      "diff",
+      "--name-only",
+      harness.characterizationCommit,
+      harness.testCommit,
+    ]),
     "test/value.test.ts",
   );
   const log = await git(repoPath, ["log", "--format=%s", "--reverse"]);
-  assert.deepEqual(log.split("\n"), ["fixture baseline", "test: add ChangeSafely safety harness"]);
+  assert.deepEqual(log.split("\n"), [
+    "fixture baseline",
+    "test: add ChangeSafely characterization harness",
+    "test: add ChangeSafely change harness",
+  ]);
   const state = await readRunState(planning.runPath);
+  assert.equal(state.characterizationCommit, harness.characterizationCommit);
   assert.equal(state.testCommit, harness.testCommit);
   assert.equal(state.phase, "harness-complete");
   const contract = state.contexts.find((entry) => entry.role === "contract");
-  const testAuthor = state.contexts.find((entry) => entry.role === "test-author");
-  assert.equal(testAuthor?.parentThreadId, contract?.threadId);
+  const characterization = state.contexts.find(
+    (entry) => entry.role === "test-author:characterization",
+  );
+  const change = state.contexts.find((entry) => entry.role === "test-author:change");
+  assert.equal(characterization?.parentThreadId, contract?.threadId);
+  assert.equal(change?.threadId, characterization?.threadId);
+  assert.equal(change?.checkpointTurnId, characterization?.turnId);
+  const c1Commands = JSON.parse(
+    await readFile(join(planning.runPath, "characterization-commands.json"), "utf8"),
+  ) as { payload: Array<{ exitCode: number }> };
+  assert.equal(c1Commands.payload[0]?.exitCode, 0);
+});
+
+test("uses C1 as the final protected harness for a pure refactor", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath, "refactor");
+  const planning = await runPlanning({
+    repoPath,
+    task: "Refactor the fixture without changing observable behavior.",
+    plannerCount: 1,
+    clientFactory,
+  });
+
+  const harness = await runHarness({ repoPath, runId: planning.runId, clientFactory });
+  assert.equal(harness.command.exitCode, 0);
+  assert.equal(harness.characterizationCommit, harness.testCommit);
+  const state = await readRunState(planning.runPath);
+  assert.equal(
+    state.contexts.some((entry) => entry.role === "test-author:change"),
+    false,
+  );
+
+  const implementation = await runImplementationAndVerification({
+    repoPath,
+    runId: planning.runId,
+    clientFactory,
+  });
+  assert.equal(implementation.accepted, true);
+  assert.deepEqual((await git(repoPath, ["log", "--format=%s", "--reverse"])).split("\n"), [
+    "fixture baseline",
+    "test: add ChangeSafely characterization harness",
+    "feat: implement selected ChangeSafely plan",
+  ]);
+});
+
+test("preserves and resumes C1 after an interrupted change-harness turn", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const planning = await runPlanning({
+    repoPath,
+    task: "Change the fixture value.",
+    plannerCount: 1,
+    clientFactory: fakeAppServerFactory(repoPath),
+  });
+  const controller = new AbortController();
+  const interrupted = runHarness({
+    repoPath,
+    runId: planning.runId,
+    signal: controller.signal,
+    clientFactory: fakeAppServerFactory(repoPath, "delay-change", {
+      signal: controller.signal,
+    }),
+  });
+  await waitFor(join(repoPath, ".changesafely", "test-change-author-started"));
+  controller.abort(new Error("test interruption"));
+  await assert.rejects(interrupted, /test interruption|aborted/iu);
+
+  const c1State = await readRunState(planning.runPath);
+  assert.equal(c1State.phase, "characterization-complete");
+  assert.equal(await git(repoPath, ["rev-parse", "HEAD"]), c1State.characterizationCommit);
+  await validateResumeBoundary(repoPath, planning.runId);
+
+  const resumed = await runHarness({
+    repoPath,
+    runId: planning.runId,
+    clientFactory: fakeAppServerFactory(repoPath),
+  });
+  assert.notEqual(resumed.testCommit, resumed.characterizationCommit);
+  assert.equal((await readRunState(planning.runPath)).phase, "harness-complete");
+});
+
+test("rejects production changes in C1 and rewrites of protected C1 during T1", async (t) => {
+  for (const mode of ["characterization-production", "rewrite-characterization"]) {
+    const repoPath = await fixtureRepo(t);
+    const clientFactory = fakeAppServerFactory(repoPath, mode);
+    const planning = await runPlanning({
+      repoPath,
+      task: "Change the fixture value.",
+      plannerCount: 1,
+      clientFactory,
+    });
+
+    await assert.rejects(
+      runHarness({ repoPath, runId: planning.runId, clientFactory }),
+      mode === "characterization-production" ? /outside test scope/u : /modified protected C1/u,
+    );
+    const state = await readRunState(planning.runPath);
+    assert.equal(state.phase, "test-author-failed");
+    assert.equal(state.testCommit, "");
+  }
 });
 
 test("accepts language-neutral nonempty failure output for a red harness", async (t) => {
@@ -268,7 +395,8 @@ test("creates I1, preserves T1, runs commands, and verifies from a fresh C0 fork
   const log = await git(repoPath, ["log", "--format=%s", "--reverse"]);
   assert.deepEqual(log.split("\n"), [
     "fixture baseline",
-    "test: add ChangeSafely safety harness",
+    "test: add ChangeSafely characterization harness",
+    "test: add ChangeSafely change harness",
     "feat: implement selected ChangeSafely plan",
   ]);
 });
@@ -355,7 +483,8 @@ test("resumes the same Implementer once for a local repair and forks a fresh Ver
   const log = await git(repoPath, ["log", "--format=%s", "--reverse"]);
   assert.deepEqual(log.split("\n"), [
     "fixture baseline",
-    "test: add ChangeSafely safety harness",
+    "test: add ChangeSafely characterization harness",
+    "test: add ChangeSafely change harness",
     "feat: implement selected ChangeSafely plan",
     "fix: repair selected ChangeSafely implementation",
   ]);

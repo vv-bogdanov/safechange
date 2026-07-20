@@ -126,6 +126,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
     artifacts: {},
     contexts: [],
     branch: "",
+    characterizationCommit: "",
     testCommit: "",
     implementationCommit: "",
     repairCount: 0,

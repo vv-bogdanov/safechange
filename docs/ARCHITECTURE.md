@@ -37,9 +37,9 @@ the actual diff and deterministic results and cannot inherit Implementer history
 
 1. `workflow.ts` checks the baseline, runs D0 and C0, forks planners, applies pure
    eligibility rules, and asks the Judge to select one eligible plan.
-2. `harness.ts` revalidates B0, creates the ChangeSafely branch, forks Test Author,
-   validates its test-only diff, proves the baseline signal, commits T1, and stores
-   hashes of every protected path.
+2. `harness.ts` revalidates B0, creates the ChangeSafely branch, forks Test Author, proves and
+   commits baseline-green C1, then resumes that thread to add baseline-red T1 when behavior
+   changes. It protects the union of both stages.
 3. `implementation.ts` forks Implementer, validates actual paths, commits I1, runs
    deterministic checks, and forks an independent Verifier. One local repair may
    resume the same Implementer before a fresh Verifier fork.
@@ -48,7 +48,8 @@ the actual diff and deterministic results and cannot inherit Implementer history
 
 ```text
 task -> evidence -> contract -> plans -> eligibility -> decision
-     -> harness/T1 -> implementation/I1 -> commands -> verification -> report
+     -> characterization/C1 -> optional change harness/T1
+     -> implementation/I1 -> commands -> verification -> report
 ```
 
 ## Sources of truth

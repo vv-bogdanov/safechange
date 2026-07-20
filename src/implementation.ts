@@ -9,6 +9,7 @@ import {
   loadVerifiedArtifact,
   type RunState,
 } from "./artifacts.js";
+import { evaluatePlan } from "./eligibility.js";
 import { abortReason, ChangeSafelyError } from "./errors.js";
 import {
   assertNoUntrackedFiles,
@@ -260,6 +261,17 @@ export async function runImplementationAndVerification(
   await assertNoUntrackedFiles(repoPath);
 
   const { contract, decision, plan } = await loadSelectedPlanArtifacts(repoPath, state);
+  const writeGate = evaluatePlan(contract, plan, capabilities);
+  if (!writeGate.eligible) {
+    throw implementationError(
+      "WRITE_ELIGIBILITY_FAILED",
+      [
+        ...writeGate.failures.map((failure) => `${failure.code}: ${failure.message}`),
+        ...writeGate.humanDecisionReasons,
+      ].join("; "),
+      2,
+    );
+  }
   const selectedPlanKey = parsePlanArtifactKey(decision.winnerPlanId);
   const harness = (await loadVerifiedArtifact(repoPath, state, "harness")).payload;
   const harnessCommandEvidence = (await loadVerifiedArtifact(repoPath, state, "commands")).payload;

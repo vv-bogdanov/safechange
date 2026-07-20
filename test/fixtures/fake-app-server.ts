@@ -36,6 +36,26 @@ interface FunctionalTarget {
   checks: Array<{ name: string; argv: string[]; cwd: string; purpose: string }>;
 }
 
+function characterizationPath(path: string): string {
+  if (path.endsWith("_test.php")) return path.replace(/_test\.php$/u, "_characterization_test.php");
+  if (/\/test_[^/]+\.py$/u.test(path)) return path.replace(/\.py$/u, "_characterization.py");
+  if (path.endsWith("_check.js")) return path.replace(/_check\.js$/u, "_characterization_check.js");
+  if (path.includes(".test.")) return path.replace(".test.", ".characterization.test.");
+  return `${path}.characterization`;
+}
+
+function characterizationContent(content: string): string {
+  return content
+    .replaceAll("requested", "baseline")
+    .replaceAll("Requested", "Baseline")
+    .replace("assert.equal(value(), 2);", 'assert.equal(typeof value, "function");')
+    .replace("assert value() == 2", "assert callable(value)")
+    .replace(
+      /check\(value\(\) === 2, '[^']*'\);/u,
+      "check(is_callable('value'), 'value must remain callable');",
+    );
+}
+
 function functionalTarget(value: string): FunctionalTarget | undefined {
   if (value === "python") {
     return {
@@ -265,6 +285,7 @@ async function structuredOutput(prompt: string): Promise<unknown> {
   }
   if (prompt.includes("[CHANGESAFELY_ROLE:contract]")) {
     return validContract({
+      ...(mode === "refactor" ? { changeKind: "refactor" as const } : {}),
       goal: "Add the requested behavior with a minimal verified change.",
       acceptanceCriteria: [
         {
@@ -350,17 +371,26 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       ...(target
         ? {
             files: [
+              ...target.tests.map((item) => ({
+                path: characterizationPath(item.path),
+                purpose: "Preservation coverage",
+              })),
               ...target.tests.map((item) => ({ path: item.path, purpose: "Acceptance coverage" })),
               ...target.sources.map((item) => ({ path: item.path, purpose: "Implementation" })),
             ],
             steps: [
               {
                 id: "S1",
+                description: "Add baseline-green characterization coverage.",
+                paths: target.tests.map((item) => characterizationPath(item.path)),
+              },
+              {
+                id: "S2",
                 description: "Add failing acceptance coverage in every target test root.",
                 paths: target.tests.map((item) => item.path),
               },
               {
-                id: "S2",
+                id: "S3",
                 description: "Implement the behavior in every target source.",
                 paths: target.sources.map((item) => item.path),
               },
@@ -431,7 +461,55 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       humanDecisionReason: "",
     };
   }
-  if (prompt.includes("[CHANGESAFELY_ROLE:test-author]")) {
+  if (prompt.includes("[CHANGESAFELY_ROLE:test-author:characterization]")) {
+    if (target) {
+      for (const item of target.tests) {
+        const path = characterizationPath(item.path);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, characterizationContent(item.content), "utf8");
+      }
+      const targeted = target.checks[0];
+      if (!targeted) throw new Error("Functional target requires one check");
+      return {
+        summary: "Added baseline-green characterization tests.",
+        testPaths: target.tests.map((item) => characterizationPath(item.path)),
+        fixturePaths: [],
+        targetedCommand: targeted,
+        expectedBaselineOutcome: "pass",
+        expectedFailure: "No failure expected; the baseline behavior must pass.",
+        protectedPaths: target.tests.map((item) => characterizationPath(item.path)),
+      };
+    }
+    await mkdir("test", { recursive: true });
+    await writeFile(
+      "test/value.characterization.test.ts",
+      `import assert from "node:assert/strict";\nimport test from "node:test";\nimport { value } from "../src/value.ts";\n\ntest("preserves the public value boundary", () => {\n  assert.equal(typeof value, "number");\n});\n`,
+      "utf8",
+    );
+    if (mode === "characterization-production") {
+      await writeFile("src/value.ts", "export const value = 2;\n", "utf8");
+    }
+    return {
+      summary: "Added a baseline-green characterization test.",
+      testPaths: ["test/value.characterization.test.ts"],
+      fixturePaths: [],
+      targetedCommand: {
+        name: "targeted characterization",
+        argv: ["npm", "test"],
+        cwd: ".",
+        purpose: "Prove existing behavior on baseline",
+      },
+      expectedBaselineOutcome: "pass",
+      expectedFailure: "No failure expected; the baseline behavior must pass.",
+      protectedPaths: ["test/value.characterization.test.ts"],
+    };
+  }
+  if (prompt.includes("[CHANGESAFELY_ROLE:test-author:change]")) {
+    if (mode === "delay-change") {
+      await mkdir(".changesafely", { recursive: true });
+      await writeFile(".changesafely/test-change-author-started", "ready\n", "utf8");
+      await new Promise((resolve) => setTimeout(resolve, 30_000));
+    }
     if (target) {
       for (const item of target.tests) {
         await mkdir(dirname(item.path), { recursive: true });
@@ -455,6 +533,9 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       `import assert from "node:assert/strict";\nimport test from "node:test";\nimport { value } from "../src/value.ts";\n\ntest("requested value", () => {\n  assert.equal(value, 2);\n});\n`,
       "utf8",
     );
+    if (mode === "rewrite-characterization") {
+      await writeFile("test/value.characterization.test.ts", "// weakened C1\n", "utf8");
+    }
     return {
       summary: "Added a failing acceptance test for the requested value.",
       testPaths: ["test/value.test.ts"],
@@ -489,11 +570,13 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       await new Promise((resolve) => setTimeout(resolve, 30_000));
     }
     const source =
-      mode === "failed-command"
-        ? "export const value = 3;\n"
-        : mode === "repair"
-          ? "export const value = 2; // verifier repair target\n"
-          : "export const value = 2;\n";
+      mode === "refactor"
+        ? "export const value = 1; // refactored without behavior change\n"
+        : mode === "failed-command"
+          ? "export const value = 3;\n"
+          : mode === "repair"
+            ? "export const value = 2; // verifier repair target\n"
+            : "export const value = 2;\n";
     await writeFile("src/value.ts", source, "utf8");
     if (mode === "protected-edit") {
       await writeFile("test/value.test.ts", "// weakened\n", "utf8");

@@ -76,7 +76,14 @@ function validateLineage(state: RunState): void {
   for (const entry of state.contexts) {
     if (
       entry.role.startsWith("planner:") ||
-      ["judge", "test-author", "implementer", "verifier", "verifier:repair"].includes(entry.role)
+      [
+        "judge",
+        "test-author",
+        "test-author:characterization",
+        "implementer",
+        "verifier",
+        "verifier:repair",
+      ].includes(entry.role)
     ) {
       if (
         entry.parentThreadId !== contract.threadId ||
@@ -84,6 +91,21 @@ function validateLineage(state: RunState): void {
       ) {
         throw lineageError(`Role lineage is invalid for ${entry.role}`);
       }
+    }
+  }
+  const characterizationAuthor = state.contexts.find(
+    (entry) => entry.role === "test-author:characterization",
+  );
+  for (const changeAuthor of state.contexts.filter(
+    (entry) => entry.role === "test-author:change",
+  )) {
+    if (
+      !characterizationAuthor?.turnId ||
+      changeAuthor.threadId !== characterizationAuthor.threadId ||
+      changeAuthor.parentThreadId !== contract.threadId ||
+      changeAuthor.checkpointTurnId !== characterizationAuthor.turnId
+    ) {
+      throw lineageError("Change-harness Test Author did not continue from C1");
     }
   }
   const repair = state.contexts.find((entry) => entry.role === "repair");
@@ -130,6 +152,7 @@ export async function validateResumeBoundary(
   const repoPath = await canonicalRepositoryPath(repoPathInput);
   const state = await loadRunState(repoPath, runId);
   state.repairCount ??= 0;
+  state.characterizationCommit ??= "";
   state.model ??= "";
   state.permissionProfile ??= "";
   state.baselineProtectedConfiguration ??= {};
@@ -163,6 +186,7 @@ export async function validateResumeBoundary(
       snapshot.commit !== state.baselineCommit ||
       snapshot.fingerprint !== state.baselineFingerprint ||
       state.branch ||
+      state.characterizationCommit ||
       state.testCommit ||
       state.implementationCommit
     ) {
@@ -177,12 +201,31 @@ export async function validateResumeBoundary(
     throw resumeError("Protected configuration metadata changed before resume");
   }
   const expectedHead =
-    boundary === "harness-complete" ? state.testCommit : state.implementationCommit;
+    boundary === "characterization-complete"
+      ? state.characterizationCommit
+      : boundary === "harness-complete"
+        ? state.testCommit
+        : state.implementationCommit;
   if (!expectedHead || snapshot.commit !== expectedHead) {
     throw resumeError("Resume HEAD does not match the completed phase commit");
   }
   if (!(await isAncestor(repoPath, state.baselineCommit, expectedHead))) {
     throw resumeError("Recorded phase commit does not descend from B0");
+  }
+  if (boundary === "characterization-complete") {
+    const characterization = (await loadVerifiedArtifact(repoPath, state, "characterization"))
+      .payload;
+    if (characterization.characterizationCommit !== state.characterizationCommit) {
+      throw resumeError("C1 artifact does not match persisted state");
+    }
+    const characterizationActual = await hashFiles(
+      repoPath,
+      Object.keys(characterization.protectedHashes),
+    );
+    if (!hashRecordsEqual(characterization.protectedHashes, characterizationActual)) {
+      throw resumeError("Protected C1 hashes changed before resume");
+    }
+    return state;
   }
   const harness = (await loadVerifiedArtifact(repoPath, state, "harness")).payload;
   if (harness.testCommit !== state.testCommit) {
@@ -227,12 +270,15 @@ async function finalizeVerifiedRun(
     if (!hashRecordsEqual(harness.protectedHashes, protectedActual)) {
       throw releaseGateError("Protected T1 hashes changed before release gate");
     }
+    const characterizationCommands = (
+      await loadVerifiedArtifact(repoPath, state, "characterizationCommands")
+    ).payload;
     const baselineCommands = (await loadVerifiedArtifact(repoPath, state, "commands")).payload;
     const finalCommandArtifact =
       state.repairCount === 1 ? "verificationCommandsRepair" : "verificationCommands";
     const verificationCommands = (await loadVerifiedArtifact(repoPath, state, finalCommandArtifact))
       .payload;
-    const allCommands = [...baselineCommands, ...verificationCommands];
+    const allCommands = [...characterizationCommands, ...baselineCommands, ...verificationCommands];
     if (
       allCommands.length === 0 ||
       allCommands.some(
@@ -242,9 +288,10 @@ async function finalizeVerifiedRun(
       throw releaseGateError("Release requires complete network-disabled sandbox command evidence");
     }
     if (
+      characterizationCommands.some((command) => command.exitCode !== 0) ||
       verificationCommands.some((command) => command.exitCode !== 0) ||
       baselineCommands.some(
-        (command) => command.exitCode === 0 && harness.expectedBaselineOutcome === "fail",
+        (command) => (command.exitCode === 0) !== (harness.expectedBaselineOutcome === "pass"),
       )
     ) {
       throw releaseGateError(
@@ -442,6 +489,17 @@ export async function resumeRun(
     const permissionProfile = state.permissionProfile || undefined;
     const boundary = resumablePhase(state);
     if (boundary === "planning-complete") {
+      return continueFromPlanning(
+        repoPath,
+        runId,
+        model,
+        permissionProfile,
+        diagnostics,
+        signal,
+        onProgress,
+      );
+    }
+    if (boundary === "characterization-complete") {
       return continueFromPlanning(
         repoPath,
         runId,

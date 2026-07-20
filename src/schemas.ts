@@ -228,12 +228,12 @@ export const decisionArtifactSchema = strictObject({
 
 export const harnessArtifactSchema = strictObject({
   summary: stringSchema,
-  testPaths: Type.Array(stringSchema, { minItems: 1, maxItems: 12 }),
+  testPaths: Type.Array(stringSchema, { minItems: 1, maxItems: HIGH_RISK_PATH_LIMIT }),
   fixturePaths: stringArraySchema,
   targetedCommand: commandSchema,
   expectedBaselineOutcome: stringEnum("fail", "pass"),
   expectedFailure: Type.String({ minLength: 1, maxLength: 400 }),
-  protectedPaths: Type.Array(stringSchema, { minItems: 1, maxItems: 12 }),
+  protectedPaths: Type.Array(stringSchema, { minItems: 1, maxItems: HIGH_RISK_PATH_LIMIT }),
 });
 
 export const implementationArtifactSchema = strictObject({
@@ -314,6 +314,7 @@ const runPhaseSchema = stringEnum(
   "baseline-changed",
   "write-preflight-blocked",
   "test-author",
+  "characterization-complete",
   "harness-complete",
   "test-author-failed",
   "implementer",
@@ -356,6 +357,7 @@ const runStateSchema = strictObject({
   artifacts: artifactHashRecordSchema,
   contexts: Type.Array(contextEntrySchema, { maxItems: 64 }),
   branch: Type.String({ maxLength: 1024 }),
+  characterizationCommit: Type.Optional(Type.String({ pattern: "^(?:[a-f0-9]{40,64})?$" })),
   testCommit: Type.String({ pattern: "^(?:[a-f0-9]{40,64})?$" }),
   implementationCommit: Type.String({ pattern: "^(?:[a-f0-9]{40,64})?$" }),
   repairCount: Type.Integer({ minimum: 0, maximum: 1 }),
@@ -438,6 +440,12 @@ const storedHarnessArtifactSchema = strictObject({
   testCommit: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
 });
 
+const storedCharacterizationArtifactSchema = strictObject({
+  ...harnessArtifactSchema.properties,
+  protectedHashes: protectedHashesSchema,
+  characterizationCommit: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
+});
+
 const storedImplementationArtifactSchema = strictObject({
   ...implementationArtifactSchema.properties,
   implementationCommit: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
@@ -457,6 +465,9 @@ export type RunStatus = RunState["status"];
 export type PlanEligibility = Mutable<Type.Static<typeof planEligibilitySchema>>;
 export type CommandEvidence = Mutable<Type.Static<typeof commandEvidenceSchema>>;
 export type StoredHarnessArtifact = Mutable<Type.Static<typeof storedHarnessArtifactSchema>>;
+export type StoredCharacterizationArtifact = Mutable<
+  Type.Static<typeof storedCharacterizationArtifactSchema>
+>;
 
 export class ArtifactValidationError extends ChangeSafelyError {
   constructor(
@@ -488,6 +499,7 @@ function compileArtifactValidator<const Schema extends Type.TSchema>(
 
 const RESUMABLE_STATUS_BY_PHASE = {
   "planning-complete": "PLANNED",
+  "characterization-complete": "RUNNING",
   "harness-complete": "RUNNING",
   "verification-complete": "RUNNING",
   verified: "VERIFIED",
@@ -505,6 +517,7 @@ const RUN_STATE_STATUSES_BY_PHASE = {
   "baseline-changed": ["BASELINE_CHANGED"],
   "write-preflight-blocked": ["BLOCKED"],
   "test-author": ["RUNNING"],
+  "characterization-complete": ["RUNNING"],
   "harness-complete": ["RUNNING"],
   "test-author-failed": ["FAILED", "BLOCKED"],
   implementer: ["RUNNING"],
@@ -683,6 +696,10 @@ export const validateCommandEvidenceList = compileArtifactValidator(
 export const validateStoredHarnessArtifact = compileArtifactValidator(
   "stored harness artifact",
   storedHarnessArtifactSchema,
+);
+export const validateStoredCharacterizationArtifact = compileArtifactValidator(
+  "stored characterization artifact",
+  storedCharacterizationArtifactSchema,
 );
 export const validateStoredImplementationArtifact = compileArtifactValidator(
   "stored implementation artifact",

@@ -5,6 +5,7 @@ import type {
   DecisionArtifact,
   DetailedPlan,
   EvidenceArtifact,
+  HarnessArtifact,
 } from "./schemas.js";
 
 export const HIGH_ASSURANCE_DOCTRINE = `Search broadly for ways the change can fail.
@@ -179,15 +180,56 @@ export function testAuthorPrompt(
   allowedTestPaths: string[],
   capabilities: RepositoryCapabilities,
 ): string {
-  return `${roleHeader("test-author")}
+  return `${roleHeader("test-author:characterization")}
 
-Objective: build the strongest available pre-implementation safety harness required by the selected plan.
+Objective: add the strongest grounded characterization harness for existing behavior and protected invariants before any production change.
 
-Directions: prefer functional checks through stable boundaries. ${RISK_DIRECTIONS} Cover the required delta and protected behavior with observable assertions grounded in the task or repository. For preservation or refactoring evidence, the declared baseline outcome may pass; for a missing behavior, it must fail for that intended reason. Append coverage or create focused test/fixture files without rewriting existing tests. targetedCommand must copy one selected-plan kind-test command verbatim from the catalog. protectedPaths must include every changed path.
+Directions: prefer functional checks through stable boundaries. ${RISK_DIRECTIONS} Assert only existing behavior and invariants grounded in repository evidence; do not assert the requested delta yet. The targeted command must copy one selected-plan kind-test command and pass on B0. Append coverage or create focused test/fixture files without rewriting existing tests. protectedPaths must include every changed path.
 
 Boundary: you are the only writer and network is off. Change only the allowed test/fixture scope below. Do not change production code, manifests, lockfiles, instructions, public behavior, existing test lines, or secret/config files. Do not use skip, only, weak assertions, or mocks of the behavior being proved. Stop rather than invent an unsupported oracle.
 
 Output: return only the schema-constrained Harness Artifact after editing.
+
+Allowed test and fixture paths/prefixes:
+${data(allowedTestPaths)}
+
+Repository capability catalog:
+${data(capabilities)}
+
+Contract:
+${data(contract)}
+
+Selected plan:
+${data(plan)}
+
+Judge decision:
+${data(decision)}`;
+}
+
+export function changeHarnessPrompt(
+  contract: ChangeContract,
+  plan: DetailedPlan,
+  decision: DecisionArtifact,
+  characterizationCommit: string,
+  characterization: HarnessArtifact,
+  allowedTestPaths: string[],
+  capabilities: RepositoryCapabilities,
+): string {
+  return `${roleHeader("test-author:change")}
+
+Objective: continue as the same Test Author from accepted C1 and add only the separate change or regression harness for the required delta.
+
+Directions: make the missing behavior executable through stable functional boundaries. ${RISK_DIRECTIONS} Assert only semantics grounded in the task or repository. The targeted command must copy one selected-plan kind-test command and fail on C1 for the intended missing behavior with an observable failure. Create separate focused test or fixture files; preserve every C1 path byte-for-byte. protectedPaths must include every newly changed path.
+
+Boundary: you are the only writer and network is off. Change only the allowed test/fixture scope below. Do not change production code, C1 files, manifests, lockfiles, instructions, public behavior, existing test lines, or secret/config files. Do not use skip, only, weak assertions, or mocks of the behavior being proved. Stop rather than invent an unsupported oracle.
+
+Output: return only the schema-constrained Harness Artifact after editing.
+
+C1 commit:
+${characterizationCommit}
+
+C1 artifact:
+${data(characterization)}
 
 Allowed test and fixture paths/prefixes:
 ${data(allowedTestPaths)}

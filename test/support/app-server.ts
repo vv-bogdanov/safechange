@@ -4,7 +4,7 @@ import { AppServerClient, type AppServerClientOptions } from "../../src/app-serv
 export function fakeAppServerFactory(
   repoPath: string,
   mode = "default",
-  options: Pick<AppServerClientOptions, "permissionProfile"> = {},
+  options: Pick<AppServerClientOptions, "permissionProfile" | "signal"> = {},
 ): () => AppServerClient {
   const fixture = fileURLToPath(new URL("../fixtures/fake-app-server.js", import.meta.url));
   return () =>

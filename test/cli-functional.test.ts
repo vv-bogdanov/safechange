@@ -229,7 +229,7 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
         ["diff", "--name-only", state.baselineCommit, state.testCommit],
         repoPath,
       ),
-      "tests/test_value.py",
+      "tests/test_value.py\ntests/test_value_characterization.py",
     );
     const commands = await loadVerifiedArtifact(repoPath, state, "verificationCommands");
     assert.ok(commands.payload.every((command) => command.argv[0] === "python"));
@@ -270,7 +270,7 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
         ["diff", "--name-only", state.baselineCommit, state.testCommit],
         repoPath,
       ),
-      "checks/value_check.js",
+      "checks/value_characterization_check.js\nchecks/value_check.js",
     );
     const commands = await loadVerifiedArtifact(repoPath, state, "verificationCommands");
     assert.deepEqual(
@@ -314,7 +314,7 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
         ["diff", "--name-only", state.baselineCommit, state.testCommit],
         repoPath,
       ),
-      "tests/value_test.php",
+      "tests/value_characterization_test.php\ntests/value_test.php",
     );
     const commands = await loadVerifiedArtifact(repoPath, state, "verificationCommands");
     assert.deepEqual(
@@ -358,11 +358,13 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
         ["diff", "--name-only", state.baselineCommit, state.testCommit],
         repoPath,
       ),
-      "consumer/tests/test_value.py\nproducer/test/value.test.js",
+      "consumer/tests/test_value.py\nconsumer/tests/test_value_characterization.py\nproducer/test/value.characterization.test.js\nproducer/test/value.test.js",
     );
     const harness = await loadVerifiedArtifact(repoPath, state, "harness");
     assert.deepEqual(Object.keys(harness.payload.protectedHashes).sort(), [
       "consumer/tests/test_value.py",
+      "consumer/tests/test_value_characterization.py",
+      "producer/test/value.characterization.test.js",
       "producer/test/value.test.js",
     ]);
     const commands = await loadVerifiedArtifact(repoPath, state, "verificationCommands");
@@ -387,7 +389,7 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
     assert.match(result.stdout, /Status: VERIFIED/);
     assert.match(result.stderr, /\[changesafely\].*discovery/);
     assert.match(result.stderr, /\[changesafely\].*verified/);
-    assert.equal(await runSuccessful("git", ["rev-list", "--count", "HEAD"], repoPath), "3");
+    assert.equal(await runSuccessful("git", ["rev-list", "--count", "HEAD"], repoPath), "4");
     const runId = result.stdout.match(/^Run: (.+)$/m)?.[1];
     assert.ok(runId);
     const state = await readState(join(repoPath, ".changesafely", "runs", runId, "state.json"));
@@ -398,11 +400,12 @@ test("packed CLI preserves its functional workflow contracts", { timeout: 180_00
         ["diff", "--name-only", state.baselineCommit, state.testCommit],
         repoPath,
       ),
-      "test/value.test.ts",
+      "test/value.characterization.test.ts\ntest/value.test.ts",
     );
     const harness = await loadVerifiedArtifact(repoPath, state, "harness");
     const verification = await loadVerifiedArtifact(repoPath, state, "verification");
     assert.ok(harness.payload.protectedHashes["test/value.test.ts"]);
+    assert.ok(harness.payload.protectedHashes["test/value.characterization.test.ts"]);
     assert.equal(verification.payload.verdict, "accept");
     assert.match(
       await readFile(join(repoPath, ".changesafely", "runs", runId, "report.md"), "utf8"),

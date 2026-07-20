@@ -81,7 +81,12 @@ ${state.task}
 - Run id: \`${state.runId}\`
 - Status: \`${state.status}\`
 - Baseline B0: \`${state.baselineCommit}\`
-- Safety harness T1: \`${state.testCommit}\`
+- Characterization C1: \`${state.characterizationCommit || state.testCommit}\`
+- Change harness T1: ${
+    state.characterizationCommit && state.characterizationCommit !== state.testCommit
+      ? `\`${state.testCommit}\``
+      : "not required"
+  }
 - Implementation I1: \`${state.implementationCommit}\`
 - Branch: \`${state.branch}\`
 - Selected plan: \`${decision.winnerPlanId}\`

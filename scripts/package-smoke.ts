@@ -115,7 +115,9 @@ try {
     throw new Error(`Installed CLI resume did not preserve verification: ${resumeOutput}`);
   }
   const commits = await runSuccessful("git", ["rev-list", "--count", "HEAD"], functionalRepo);
-  if (commits !== "3") throw new Error(`Expected B0, T1, and I1 commits, found ${commits}`);
+  if (commits !== "4") {
+    throw new Error(`Expected B0, C1, T1, and I1 commits, found ${commits}`);
+  }
 
   const demoRoot = join(temporaryRoot, "demo");
   await runSuccessful(setupDemo, ["--target", demoRoot], temporaryRoot);

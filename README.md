@@ -20,8 +20,9 @@ stops. Additional toolchains are listed only after a fixture passes.
 
 - **Alternatives before edits.** Independent planners fork from one canonical
   contract; deterministic eligibility gates run before the Judge.
-- **Tests before production code.** Test Author creates and commits T1 before the
-  Implementer can change production paths. T1 hashes remain protected.
+- **Tests before production code.** Test Author commits baseline-green C1 and, when behavior
+  changes, baseline-red T1 before the Implementer can change production paths. Their union remains
+  protected.
 - **Independent verification.** Verifier forks from C0 rather than inheriting the
   Implementer transcript and receives the actual diff and command evidence.
 - **Broad evidence, narrow change.** Discovery and verification inspect the complete
@@ -196,9 +197,9 @@ changesafely run \
   --task "Retry a payment once after a transient timeout without allowing a duplicate charge"
 ```
 
-A successful history is `B0 -> T1 -> I1`: baseline, protected safety harness,
-and one implementation. An optional bounded repair adds one commit without
-rewriting history.
+A behavior-changing history is `B0 -> C1 -> T1 -> I1`: baseline, baseline-green
+characterization, baseline-red change harness, and one implementation. A pure refactor uses
+`B0 -> C1 -> I1`. An optional bounded repair adds one commit without rewriting history.
 
 ```sh
 git -C /tmp/changesafely-payment-demo log --oneline --reverse
@@ -229,7 +230,10 @@ Runs are stored under `.changesafely/runs/<run-id>/`:
 - `state.json`: versioned phase/status, Git state, hashes, and role lineage.
 - `evidence.json`, `contract.json`, `plans/*.json`, `eligibility.json`, and
   `decision.json`: the read-only plan tournament.
-- `harness.json` and `commands.json`: protected T1 paths and failing-first evidence.
+- `characterization.json` and `characterization-commands.json`: protected C1 paths and
+  baseline-green evidence.
+- `harness.json` and `commands.json`: the final protected C1/T1 union and its expected baseline
+  outcome.
 - `implementation.json`, optional `repair.json`, command evidence, and
   `verification.json`: the actual change and independent verdict.
 - `report.md`: concise outcome, residual risks, and next action.
@@ -243,7 +247,7 @@ Runs are stored under `.changesafely/runs/<run-id>/`:
 
 Writes are atomic. State and artifact envelopes carry format and producer versions;
 artifacts name their hashed predecessors. Resume revalidates these contracts,
-expected branch and commits, baseline ancestry, and protected T1 files.
+expected branch and commits, baseline ancestry, and protected C1/T1 files.
 
 ## Status And Exit Codes
 

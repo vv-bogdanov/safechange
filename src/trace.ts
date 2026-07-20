@@ -443,7 +443,7 @@ export class TraceWriter {
         this.activePhase = state.phase;
       }
       const status = stateTraceStatus(state);
-      const commit = state.implementationCommit || state.testCommit;
+      const commit = state.implementationCommit || state.testCommit || state.characterizationCommit;
       inputs.push({
         component: "state",
         event: "state.transition",

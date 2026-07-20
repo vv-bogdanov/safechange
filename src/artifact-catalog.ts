@@ -12,6 +12,8 @@ const validators = {
   contract: Schema.validateChangeContract,
   eligibility: Schema.validatePlanEligibilityList,
   decision: Schema.validateDecisionArtifact,
+  characterization: Schema.validateStoredCharacterizationArtifact,
+  characterizationCommands: Schema.validateCommandEvidenceList,
   harness: Schema.validateStoredHarnessArtifact,
   commands: Schema.validateCommandEvidenceList,
   implementation: Schema.validateStoredImplementationArtifact,
@@ -73,8 +75,16 @@ export function validateArtifactInputKeys(key: ArtifactKey, inputs: ArtifactKey[
       case "decision":
         valid = sameKeys(inputs, ["contract", "eligibility"]);
         break;
-      case "harness":
+      case "characterization":
         valid = hasOnePlan(inputs, ["contract", "decision"]);
+        break;
+      case "characterizationCommands":
+        valid = sameKeys(inputs, ["characterization"]);
+        break;
+      case "harness":
+        valid =
+          hasOnePlan(inputs, ["contract", "decision"]) ||
+          hasOnePlan(inputs, ["characterization", "contract", "decision"]);
         break;
       case "commands":
         valid = sameKeys(inputs, ["harness"]);

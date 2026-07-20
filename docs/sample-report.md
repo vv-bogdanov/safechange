@@ -9,7 +9,8 @@ Retry a payment once after a transient timeout without allowing a duplicate char
 - Run id: `<run-id>`
 - Status: `VERIFIED`
 - Baseline B0: `<baseline-commit>`
-- Safety harness T1: `<test-commit>`
+- Characterization C1: `<characterization-commit>`
+- Change harness T1: `<test-commit>`
 - Implementation I1: `<implementation-commit>`
 - Branch: `changesafely/<run-id>`
 - Selected plan: `plan-2`

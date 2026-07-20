@@ -76,16 +76,22 @@ export function validPlan(overrides: Partial<DetailedPlan> = {}): DetailedPlan {
     invariantProtection: [{ id: "INV1", strategy: "Keep the exported signature." }],
     riskMitigation: [{ id: "R1", strategy: "Exercise the old and requested behavior." }],
     files: [
+      { path: "test/value.characterization.test.ts", purpose: "Preservation coverage" },
       { path: "test/value.test.ts", purpose: "Acceptance coverage" },
       { path: "src/value.ts", purpose: "Implementation" },
     ],
     steps: [
       {
         id: "S1",
+        description: "Add baseline-green characterization coverage.",
+        paths: ["test/value.characterization.test.ts"],
+      },
+      {
+        id: "S2",
         description: "Add the failing acceptance test.",
         paths: ["test/value.test.ts"],
       },
-      { id: "S2", description: "Implement the behavior.", paths: ["src/value.ts"] },
+      { id: "S3", description: "Implement the behavior.", paths: ["src/value.ts"] },
     ],
     safetyTests: [{ name: "acceptance", proves: "AC1", argv: ["npm", "test"], cwd: "." }],
     verificationCommands: [

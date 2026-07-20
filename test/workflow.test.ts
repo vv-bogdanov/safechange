@@ -142,6 +142,22 @@ test("plans when contract models testable uncertainty as a critical risk", async
   assert.equal(state.branch, "");
 });
 
+test("normalizes absolute contract write prefixes before planner eligibility", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const result = await runPlanning({
+    repoPath,
+    task: "Change the fixture value with repository-relative plan paths.",
+    plannerCount: 1,
+    clientFactory: fakeAppServerFactory(repoPath, "absolute-contract-scope"),
+  });
+
+  assert.equal(result.status, "PLANNED");
+  const contract = JSON.parse(await readFile(join(result.runPath, "contract.json"), "utf8")) as {
+    payload: { allowedPathPrefixes: string[] };
+  };
+  assert.deepEqual(contract.payload.allowedPathPrefixes, ["src", "test"]);
+});
+
 test("carries testable contract risk into Test Author evidence", async (t) => {
   const repoPath = await fixtureRepo(t);
   const clientFactory = fakeAppServerFactory(repoPath, "testable-contract-risk");

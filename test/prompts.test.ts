@@ -141,7 +141,8 @@ test("every role receives the compact high-assurance doctrine exactly once", () 
 test("role prompts keep broad reasoning and narrow action boundaries", () => {
   const values = prompts();
   assert.match(values.discovery ?? "", /complete relevant impact surface/u);
-  assert.match(values.contract ?? "", /constrain later writes, never read-only inspection/u);
+  assert.match(values.contract ?? "", /repository-relative write prefixes only/u);
+  assert.match(values.contract ?? "", /exclude read-only evidence or control files/u);
   assert.match(values.contract ?? "", /Classify changeKind/u);
   assert.match(values.contract ?? "", /bounded by a conservative executable policy/u);
   assert.match(values.contract ?? "", /safest local policy/u);

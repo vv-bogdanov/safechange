@@ -229,10 +229,9 @@ export function evaluatePlan(
     );
   }
 
-  const outsideScope = [
-    ...plan.files.map((file) => file.path),
-    ...plan.steps.flatMap((step) => step.paths),
-  ].filter((path) => !pathWithinPrefixes(path, contract.allowedPathPrefixes));
+  const outsideScope = plan.files
+    .map((file) => file.path)
+    .filter((path) => !pathWithinPrefixes(path, contract.allowedPathPrefixes));
   if (outsideScope.length > 0) {
     failures.push({
       code: "OUTSIDE_ALLOWED_SCOPE",

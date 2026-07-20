@@ -181,6 +181,43 @@ test("keeps long eligibility diagnostics artifact-valid", () => {
   validatePlanEligibilityList([result]);
 });
 
+test("scopes writes by declared plan files, not read-only step references", () => {
+  const withControlStep = evaluatePlan(
+    contract,
+    validPlan({
+      steps: [
+        {
+          id: "S1",
+          description: "Read package metadata for command evidence.",
+          paths: ["package.json"],
+        },
+        { id: "S2", description: "Add the safety harness.", paths: ["test/value.test.ts"] },
+        { id: "S3", description: "Implement the behavior.", paths: ["src/value.ts"] },
+      ],
+    }),
+    capabilities,
+  );
+  assert.deepEqual(
+    withControlStep.failures.filter((failure) => failure.code === "OUTSIDE_ALLOWED_SCOPE"),
+    [],
+  );
+  assert.equal(withControlStep.eligible, true);
+
+  const withOutOfScopeWrite = evaluatePlan(
+    contract,
+    validPlan({
+      files: [{ path: "package.json", purpose: "Unexpected control-file write." }],
+      steps: [{ id: "S1", description: "Change package metadata.", paths: ["package.json"] }],
+    }),
+    capabilities,
+  );
+  assert.equal(withOutOfScopeWrite.eligible, false);
+  assert.deepEqual(
+    withOutOfScopeWrite.failures.map((failure) => failure.code),
+    ["OUTSIDE_ALLOWED_SCOPE", "MISSING_TEST_PATH"],
+  );
+});
+
 test("accepts natural plan relationship links without weakening coverage ids", () => {
   const linkedContract = validContract({
     nonGoals: [

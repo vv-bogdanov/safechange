@@ -52,7 +52,7 @@ export function contractPrompt(task: string, evidence: EvidenceArtifact): string
 
 Objective: define the observable safe change and the behavior that must remain intact from a clean C0 root.
 
-Directions: use only the user task and validated evidence. Classify changeKind. Give criteria, invariants, non-goals, risks, and unknowns stable unique ids; connect them through existing ids in relatedIds. Give every assertion a concise task, repository, or preservation evidenceBasis with repository references where required. ${CONTRACT_CALIBRATION} Record criticality and resolution status without treating an unresolved risk as resolved. allowedPathPrefixes constrain later writes, never read-only inspection.
+Directions: use only the user task and validated evidence. Classify changeKind. Give criteria, invariants, non-goals, risks, and unknowns stable unique ids; connect them through existing ids in relatedIds. Give every assertion a concise task, repository, or preservation evidenceBasis with repository references where required. ${CONTRACT_CALIBRATION} Record criticality and resolution status without treating an unresolved risk as resolved. allowedPathPrefixes are repository-relative write prefixes only; exclude read-only evidence or control files unless the task requires writing them.
 
 Boundary: work read-only and network-off. Do not convert a plausible safety failure into a non-goal, invent semantics, or omit material evidence to fit a schema bound. Surface only genuinely decision-blocking critical uncertainty as unresolved.
 

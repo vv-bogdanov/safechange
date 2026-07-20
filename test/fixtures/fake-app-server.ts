@@ -511,7 +511,10 @@ async function structuredOutput(prompt: string): Promise<unknown> {
       ],
       approvalRequiredChanges: ["New production dependencies"],
       evidenceGaps: ["Acceptance test is missing."],
-      allowedPathPrefixes: target?.allowedPathPrefixes ?? ["src", "test"],
+      allowedPathPrefixes:
+        mode === "absolute-contract-scope"
+          ? [`${process.cwd()}/src`, `${process.cwd()}/test`]
+          : (target?.allowedPathPrefixes ?? ["src", "test"]),
       ...(mode === "testable-contract-risk"
         ? {
             risks: [

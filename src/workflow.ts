@@ -87,6 +87,22 @@ function normalizePlanRepositoryPaths(plan: DetailedPlan, repoPath: string): Det
   };
 }
 
+function normalizeContractRepositoryPaths(
+  contract: ChangeContract,
+  repoPath: string,
+): ChangeContract {
+  return {
+    ...contract,
+    allowedPathPrefixes: contract.allowedPathPrefixes.map((prefix) => {
+      try {
+        return normalizeRepositoryPathForRoot(prefix, repoPath);
+      } catch {
+        return prefix;
+      }
+    }),
+  };
+}
+
 export interface PlanningOptions {
   repoPath: string;
   task: string;
@@ -348,6 +364,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
         contractTurn.turnId,
       );
     }
+    contractArtifact = normalizeContractRepositoryPaths(contractArtifact, baseline.repoPath);
 
     let contractFailures = evaluateContract(contractArtifact);
     if (!contractCorrectionUsed && hasCorrectableContractFailure(contractFailures)) {
@@ -364,7 +381,7 @@ export async function runPlanning(options: PlanningOptions): Promise<PlanningRes
       if (retentionFailures.length > 0) {
         contractFailures = [...retentionFailures, ...contractFailures];
       } else {
-        contractArtifact = correctedContract;
+        contractArtifact = normalizeContractRepositoryPaths(correctedContract, baseline.repoPath);
         contractFailures = evaluateContract(contractArtifact);
       }
     }

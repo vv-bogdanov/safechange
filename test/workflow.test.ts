@@ -614,6 +614,28 @@ test("preserves and resumes C1 after an interrupted change-harness turn", async 
   assert.equal((await readRunState(planning.runPath)).phase, "harness-complete");
 });
 
+test("resumes the Test Author thread before creating the T1 harness", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath, "require-change-resume");
+  const planning = await runPlanning({
+    repoPath,
+    task: "Change the fixture value.",
+    plannerCount: 1,
+    clientFactory,
+  });
+
+  const harness = await runHarness({ repoPath, runId: planning.runId, clientFactory });
+  assert.notEqual(harness.testCommit, harness.characterizationCommit);
+  const state = await readRunState(planning.runPath);
+  assert.equal(state.phase, "harness-complete");
+  assert.equal(
+    state.contexts.some(
+      (entry) => entry.role === "test-author:change" && entry.status === "completed",
+    ),
+    true,
+  );
+});
+
 test("rejects production changes in C1 and rewrites of protected C1 during T1", async (t) => {
   for (const mode of ["characterization-production", "rewrite-characterization"]) {
     const repoPath = await fixtureRepo(t);

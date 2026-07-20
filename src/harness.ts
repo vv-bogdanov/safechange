@@ -1156,6 +1156,12 @@ async function createChangeHarness(context: HarnessContext): Promise<HarnessResu
   const client = createClient(context);
   try {
     await client.start();
+    await client.resumeThread({
+      threadId: characterizationContext.threadId,
+      cwd: repoPath,
+      approvalPolicy: "never",
+      sandbox: "workspace-write",
+    });
     const roleContext = startContext(
       "test-author:change",
       characterizationContext.threadId,

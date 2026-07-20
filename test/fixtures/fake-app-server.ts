@@ -16,6 +16,7 @@ let turnNumber = 0;
 let verifierNumber = 0;
 let harnessVerifierNumber = 0;
 let harnessCorrectionNumber = 0;
+const resumedThreads = new Set<string>();
 const mode = process.argv[2] ?? "default";
 if (mode === "stderr") process.stderr.write("private-app-server-stderr-marker\n");
 const lines = createInterface({ input: process.stdin });
@@ -1160,6 +1161,7 @@ lines.on("line", async (line) => {
   }
 
   if (message.method === "thread/resume") {
+    resumedThreads.add(String(message.params?.threadId ?? "thread-unknown"));
     send({
       id: message.id,
       result: { thread: { id: String(message.params?.threadId ?? "thread-unknown") } },
@@ -1198,6 +1200,14 @@ lines.on("line", async (line) => {
     const threadId = String(message.params?.threadId ?? "thread-unknown");
     const input = message.params?.input as Array<{ type: string; text?: string }> | undefined;
     const prompt = input?.find((item) => item.type === "text")?.text ?? "";
+    if (
+      mode === "require-change-resume" &&
+      prompt.includes("[CHANGESAFELY_ROLE:test-author:change]") &&
+      !resumedThreads.has(threadId)
+    ) {
+      send({ id: message.id, error: { code: -32000, message: `thread not found: ${threadId}` } });
+      return;
+    }
     const text = JSON.stringify(await structuredOutput(prompt));
     send({ id: message.id, result: { turn: { id: turnId } } });
     if (mode === "malformed-notification") {

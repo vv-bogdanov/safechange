@@ -215,7 +215,9 @@ test("loads and normalizes a hash-verified artifact v2 contract", async (t) => {
   const loaded = (await loadVerifiedArtifact(repoPath, state, "contract")).payload;
   assert.equal(loaded.changeKind, "mixed");
   assert.equal(loaded.risks[0]?.critical, true);
+  assert.deepEqual(loaded.risks[0]?.relatedIds, ["AC1"]);
   assert.equal(loaded.unknowns[0]?.resolutionStatus, "unresolved");
+  assert.deepEqual(loaded.unknowns[0]?.relatedIds, ["AC1"]);
 });
 
 test("loads an artifact v3 harness as explicitly unmapped evidence", async (t) => {

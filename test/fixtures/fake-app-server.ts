@@ -433,6 +433,42 @@ async function structuredOutput(prompt: string): Promise<unknown> {
     if (mode === "contract-correction-critical-downgrade" && isCorrection) {
       return validContract({ risks: [testableRisk(["AC1"])] });
     }
+    if (mode === "traceable-contract-graph") {
+      return validContract({
+        risks: [testableRisk(["AC1", "INV1", "U1", "NG1"])],
+        unknowns: [
+          {
+            id: "U1",
+            statement: "The broader runtime deployment policy is locally bounded.",
+            critical: false,
+            resolutionStatus: "resolved" as const,
+            resolution: "The local harness can prove the safety boundary for this change.",
+            relatedIds: ["R1", "NG1"],
+            evidenceBasis: [
+              {
+                source: "repository" as const,
+                detail: "The fixture has deterministic local evidence for the bounded boundary.",
+                references: [{ path: sourcePath, detail: "Local proof boundary." }],
+              },
+            ],
+          },
+        ],
+        nonGoals: [
+          {
+            id: "NG1",
+            statement: "Do not add deployment policy machinery.",
+            evidenceBasis: [
+              {
+                source: "task" as const,
+                detail: "The requested change is local and executable.",
+                references: [],
+              },
+            ],
+            relatedRiskIds: ["R1"],
+          },
+        ],
+      });
+    }
     return validContract({
       ...(mode === "refactor" ? { changeKind: "refactor" as const } : {}),
       goal: "Add the requested behavior with a minimal verified change.",

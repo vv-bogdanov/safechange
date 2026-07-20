@@ -142,6 +142,49 @@ test("plans when contract models testable uncertainty as a critical risk", async
   assert.equal(state.branch, "");
 });
 
+test("carries testable contract risk into Test Author evidence", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const clientFactory = fakeAppServerFactory(repoPath, "testable-contract-risk");
+  const planning = await runPlanning({
+    repoPath,
+    task: "Change the fixture value and prove the local failure boundary.",
+    plannerCount: 1,
+    clientFactory,
+  });
+
+  const harness = await runHarness({ repoPath, runId: planning.runId, clientFactory });
+
+  assert.equal(harness.harness.coverage.matrix.branches.relatedRiskIds.includes("R1"), true);
+  const state = await readRunState(planning.runPath);
+  assert.equal(state.phase, "harness-complete");
+  assert.ok(state.contexts.some((entry) => entry.role === "planner:plan-1"));
+  assert.ok(state.contexts.some((entry) => entry.role === "test-author:change"));
+});
+
+test("persists broad contract relationship graphs as traceable evidence", async (t) => {
+  const repoPath = await fixtureRepo(t);
+  const result = await runPlanning({
+    repoPath,
+    task: "Change the fixture value while preserving traceable risk boundaries.",
+    plannerCount: 1,
+    clientFactory: fakeAppServerFactory(repoPath, "traceable-contract-graph"),
+  });
+
+  assert.equal(result.status, "PLANNED");
+  const contract = JSON.parse(await readFile(join(result.runPath, "contract.json"), "utf8")) as {
+    payload: {
+      risks: Array<{ id: string; relatedIds: string[] }>;
+      unknowns: Array<{ id: string; relatedIds: string[] }>;
+      nonGoals: Array<{ id: string; relatedRiskIds: string[] }>;
+    };
+  };
+  assert.deepEqual(contract.payload.risks[0]?.relatedIds, ["AC1", "INV1", "U1", "NG1"]);
+  assert.deepEqual(contract.payload.unknowns[0]?.relatedIds, ["R1", "NG1"]);
+  assert.deepEqual(contract.payload.nonGoals[0]?.relatedRiskIds, ["R1"]);
+  const state = await readRunState(result.runPath);
+  assert.ok(state.contexts.some((entry) => entry.role === "planner:plan-1"));
+});
+
 test("corrects one malformed contract schema in the same root before planners", async (t) => {
   const repoPath = await fixtureRepo(t);
   const result = await runPlanning({

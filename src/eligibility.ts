@@ -10,8 +10,22 @@ export type { PlanEligibility } from "./schemas.js";
 
 export type EligibilityFailure = PlanEligibility["failures"][number];
 
+const MAX_ELIGIBILITY_MESSAGE_LENGTH = 400;
+
+function truncateEligibilityMessage(message: string): string {
+  if (message.length <= MAX_ELIGIBILITY_MESSAGE_LENGTH) return message;
+  return `${message.slice(0, MAX_ELIGIBILITY_MESSAGE_LENGTH - 3).trimEnd()}...`;
+}
+
+function normalizeFailures(failures: EligibilityFailure[]): EligibilityFailure[] {
+  return failures.map((failure) => ({
+    ...failure,
+    message: truncateEligibilityMessage(failure.message),
+  }));
+}
+
 function addFailure(failures: EligibilityFailure[], code: string, message: string): void {
-  failures.push({ code, message });
+  failures.push({ code, message: truncateEligibilityMessage(message) });
 }
 
 function duplicateIds(ids: string[]): string[] {
@@ -126,7 +140,7 @@ export function evaluateContract(contract: ChangeContract): EligibilityFailure[]
         .join(", ")}`,
     );
   }
-  return failures;
+  return normalizeFailures(failures);
 }
 
 export function evaluatePlan(
@@ -347,7 +361,7 @@ export function evaluatePlan(
   return {
     planId: plan.planId,
     eligible: failures.length === 0 && humanDecisionReasons.length === 0,
-    failures,
+    failures: normalizeFailures(failures),
     humanDecisionReasons,
   };
 }

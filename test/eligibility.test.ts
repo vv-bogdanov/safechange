@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateContract, evaluatePlan } from "../src/eligibility.js";
 import type { RepositoryCapabilities } from "../src/repository-capabilities.js";
+import { validatePlanEligibilityList } from "../src/schemas.js";
 import { validContract, validPlan } from "./support/artifacts.js";
 
 const contract = validContract();
@@ -156,6 +157,28 @@ test("rejects missing critical risk mitigation and unknown coverage ids", () => 
     result.failures.map((failure) => failure.code),
     ["MISSING_CRITICAL_RISK_MITIGATION", "UNKNOWN_COVERAGE_ID"],
   );
+});
+
+test("keeps long eligibility diagnostics artifact-valid", () => {
+  const paths = Array.from(
+    { length: 12 },
+    (_, index) => `unexpected/deeply-nested-legacy-entrypoint-${index}-with-extra-context.js`,
+  );
+  const result = evaluatePlan(
+    contract,
+    validPlan({
+      files: paths.map((path) => ({ path, purpose: "Out-of-scope diagnostic fixture" })),
+      steps: [{ id: "S1", description: "Touch many out-of-scope paths.", paths }],
+    }),
+    capabilities,
+  );
+
+  const outsideScope = result.failures.find((failure) => failure.code === "OUTSIDE_ALLOWED_SCOPE");
+  assert.ok(outsideScope);
+  assert.equal(outsideScope.message.length, 400);
+  assert.match(outsideScope.message, /\.\.\.$/u);
+  assert.equal(result.eligible, false);
+  validatePlanEligibilityList([result]);
 });
 
 test("accepts natural plan relationship links without weakening coverage ids", () => {

@@ -97,6 +97,7 @@ test("persists versioned provenance and opt-in diagnostics with restricted permi
     effort: "low",
     sandboxPolicy: "readOnly:network-off",
     promptSha256: "c".repeat(64),
+    promptBytes: 321,
     outputSchemaSha256: "d".repeat(64),
   });
   await writer.recordAppServerVersion("codex-app-server/test");
@@ -109,6 +110,7 @@ test("persists versioned provenance and opt-in diagnostics with restricted permi
   assert.equal(manifest.model, "test-model");
   assert.equal(manifest.appServerUserAgent, "codex-app-server/test");
   assert.equal(manifest.roles[0]?.promptSha256, "c".repeat(64));
+  assert.equal(manifest.roles[0]?.promptBytes, 321);
   assert.ok(manifest.completedAt);
   assert.doesNotMatch(JSON.stringify(manifest), /bounded raw output/);
 

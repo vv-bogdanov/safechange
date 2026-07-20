@@ -142,7 +142,8 @@ test("persists fork lineage and privacy-safe tool metrics", async (t) => {
   await withTracedFakeClient(t, "tool-notification", async (client, trace) => {
     const root = await startReadOnlyThread(client);
     const child = await client.forkThread({ threadId: root.thread.id });
-    await client.runTurn(child.thread.id, "Return the smoke artifact.", {
+    const prompt = "Return the smoke artifact.";
+    await client.runTurn(child.thread.id, prompt, {
       cwd: process.cwd(),
       sandboxPolicy: { type: "readOnly", networkAccess: false },
       outputSchema: smokeArtifactSchema,
@@ -153,6 +154,10 @@ test("persists fork lineage and privacy-safe tool metrics", async (t) => {
     const fork = document.events.find((event) => event.event === "thread.forked");
     assert.equal(fork?.parentThreadId, root.thread.id);
     assert.equal(fork?.threadId, child.thread.id);
+    const turn = document.events.find(
+      (event) => event.event === "turn.executed" && event.status === "started",
+    );
+    assert.equal(turn?.promptBytes, Buffer.byteLength(prompt));
     const tool = document.events.find((event) => event.event === "item.completed");
     assert.equal(tool?.itemType, "commandExecution");
     assert.equal(tool?.toolFailed, false);

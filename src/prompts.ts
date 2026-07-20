@@ -7,34 +7,59 @@ import type {
   EvidenceArtifact,
 } from "./schemas.js";
 
+export const HIGH_ASSURANCE_DOCTRINE = `Search broadly for ways the change can fail.
+Assert behavior only when grounded in the task or repository evidence.
+Treat preservation of unrelated observable behavior as equal to acceptance.
+Map every critical risk to executable evidence.
+Stop when a critical uncertainty cannot be resolved safely.
+Do not infer success from model confidence or a green suite alone.`;
+
+const RISK_DIRECTIONS =
+  "Consider applicable behavior, state, effects, failures, time, and boundary risks; justify concrete non-applicability instead of generating boilerplate.";
+
 function data(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
+function roleHeader(role: string): string {
+  return `[CHANGESAFELY_ROLE:${role}]
+${HIGH_ASSURANCE_DOCTRINE}`;
+}
+
 export function discoveryPrompt(task: string, capabilities: RepositoryCapabilities): string {
-  return `[CHANGESAFELY_ROLE:discovery]
-You are ChangeSafely Scratch Discovery D0. Work read-only. Do not edit files, use network, read .env/secret files, or expose credentials.
+  return `${roleHeader("discovery")}
+
+Objective: build verified repository evidence for the task without proposing a solution.
+
+Directions: inspect the complete relevant impact surface, including callers, shared state, side effects, failures, temporal behavior, identities, and operational configuration. ${RISK_DIRECTIONS} Treat the capability catalog as the complete command authority; do not invent commands. Record facts with repository-relative references, existing checks, test gaps, instruction constraints, assumptions, and unknowns.
+
+Boundary: work read-only and network-off. Do not edit files, inspect secret contents, or expose credentials. An unresolved fact remains an unknown.
+
+Output: return only the schema-constrained Evidence Artifact.
 
 User task:
 ${task}
 
-The deterministic repository capability catalog is:
-${data(capabilities)}
-
-Inspect only the relevant repository surface. Treat the catalog as the complete set of available non-interactive checks; do not invent commands. Later write phases run selected checks inside a sandbox, so do not mark a catalog check unusable merely because this discovery turn is read-only. Return verified facts with repository-relative file references, test gaps, constraints from instruction files, assumptions, and unknowns. Do not propose an implementation plan. Return only the schema-constrained JSON object.`;
+Repository capability catalog:
+${data(capabilities)}`;
 }
 
 export function contractPrompt(task: string, evidence: EvidenceArtifact): string {
-  return `[CHANGESAFELY_ROLE:contract]
-You are ChangeSafely Canonical Contract C0 in a clean root thread. Work read-only and network-off. Do not inherit discovery speculation: use only the user intent and validated evidence below, and re-check a fact only when essential.
+  return `${roleHeader("contract")}
+
+Objective: define the observable safe change and the behavior that must remain intact from a clean C0 root.
+
+Directions: use only the user task and validated evidence. Give every acceptance criterion and protected invariant a stable unique id. Separate the required delta, preservation, non-goals, risks, evidence gaps, approval-sensitive changes, and unresolved semantics. Ground every non-obvious assertion in the task or evidence. allowedPathPrefixes constrain later writes, never read-only inspection.
+
+Boundary: work read-only and network-off. Do not convert a plausible safety failure into a non-goal or invent semantics to resolve uncertainty. Surface critical ambiguity explicitly.
+
+Output: return only the schema-constrained Change Contract.
 
 User task:
 ${task}
 
 Validated evidence:
-${data(evidence)}
-
-Create a concise Change Contract. Give every acceptance criterion and protected invariant a stable unique id. allowedPathPrefixes must be repository-relative path prefixes sufficient for the task, never absolute paths. Mark changes needing human approval. Keep prose fields to one concise sentence and do not repeat the same constraint across arrays. Return only the schema-constrained JSON object.`;
+${data(evidence)}`;
 }
 
 export function plannerPrompt(
@@ -43,15 +68,20 @@ export function plannerPrompt(
   contract: ChangeContract,
   capabilities: RepositoryCapabilities,
 ): string {
-  return `[CHANGESAFELY_ROLE:planner]
-You are independent planner ${planId}, forked directly from C0. Your lens is: ${lens}.
+  return `${roleHeader("planner")}
 
-Produce one self-contained detailed plan grounded in the repository. Set planId exactly to ${planId} and lens exactly to ${lens}. Cover contract ids exactly, declare every file path, dependency, migration, approval-sensitive change, risk, assumption, and unknown. Every safety or verification command must copy one exact argv and cwd from the capability catalog below; safetyTests must select a check whose kind is test. Use cwd "." when the catalog does. Do not invent forwarded arguments or target source files directly. The dependencies array contains only actual new package names, migrations contains only actual migrations, and approvalRequiredChanges contains only sensitive changes this plan really performs. Use an empty array when there are none; never put "none", policy reminders, or negative sentences in those three arrays. Keep each prose field to one concise sentence, avoid repeating contract text, and materially express the assigned lens without adding needless scope. Acknowledge rejection reasons when this lens is unsuitable. Do not edit files. Return only the schema-constrained JSON object.
+Objective: as independent planner ${planId}, whose lens is: ${lens}, produce one self-contained admissible plan with the strongest practical evidence and smallest sufficient production delta.
+
+Directions: cover every contract id, declare all planned paths and sensitive changes, and make risks, assumptions, unknowns, recovery, and rejection reasons explicit. ${RISK_DIRECTIONS} Select every safety and verification command verbatim by argv and cwd from the capability catalog; safety tests must select kind test. Record only actual new dependencies, migrations, and approval-sensitive changes. Materially apply the assigned lens without expanding scope for variety.
+
+Boundary: work read-only. Do not edit files or invent command authority. If the lens cannot produce a safe admissible plan, say why in rejectionReasons rather than disguising the gap.
+
+Output: set planId to ${planId}, lens to ${lens}, and return only the schema-constrained Detailed Plan.
 
 Repository capability catalog:
 ${data(capabilities)}
 
-Canonical contract for explicit reference:
+Canonical contract:
 ${data(contract)}`;
 }
 
@@ -63,14 +93,19 @@ export function plannerCorrectionPrompt(
   gate: PlanEligibility,
   capabilities: RepositoryCapabilities,
 ): string {
-  return `[CHANGESAFELY_ROLE:planner]
+  return `${roleHeader("planner")}
 [CHANGESAFELY_CORRECTION]
-You are independent planner ${planId} with lens is: ${lens}. Your first artifact failed deterministic pre-Judge gates. Correct the artifact once without editing files or broadening scope.
+
+Objective: as the same planner ${planId}, whose lens is: ${lens}, correct the rejected artifact once.
+
+Directions: address only the deterministic gate feedback while preserving genuine risks and sensitive changes. Questions belong in unknowns. Approval-required changes contain only changes this plan actually performs. Commands must remain verbatim catalog argv/cwd values and safety tests must select kind test.
+
+Boundary: work read-only. Do not broaden scope, hide uncertainty, or edit files. If the plan remains unsafe, preserve the blocking reason.
+
+Output: set planId to ${planId}, lens to ${lens}, and return only the complete corrected Detailed Plan.
 
 Gate feedback:
 ${data(gate)}
-
-Questions and optional clarifications belong in unknowns, not approvalRequiredChanges. approvalRequiredChanges must contain only changes this plan actually performs that affect manifests, dependencies, migrations, public APIs, permissions, secrets, or deployment; preserve any genuine sensitive change. Every command must exactly copy argv and cwd from the repository capability catalog, and every safety test must select kind test. Set planId exactly to ${planId} and lens exactly to ${lens}. Return only the complete corrected schema-constrained JSON object.
 
 Repository capability catalog:
 ${data(capabilities)}
@@ -78,7 +113,7 @@ ${data(capabilities)}
 Contract:
 ${data(contract)}
 
-First artifact:
+Rejected artifact:
 ${data(plan)}`;
 }
 
@@ -87,8 +122,15 @@ export function judgePrompt(
   plans: DetailedPlan[],
   eligibility: PlanEligibility[],
 ): string {
-  return `[CHANGESAFELY_ROLE:judge]
-You are ChangeSafely Judge, forked directly from C0. Compare only the validated eligible plans and deterministic gate results below. Choose the simplest admissible plan that fully meets the contract. Do not use numerical scores. Explain the winner, concrete rejection reasons, tradeoffs, and residual risks. winnerPlanId must name one supplied eligible plan. Return only the schema-constrained JSON object.
+  return `${roleHeader("judge")}
+
+Objective: choose the eligible plan with the strongest executable evidence and lowest unresolved safety risk.
+
+Directions: compare only validated eligible plans and deterministic gate results. Evaluate contract coverage, protected invariants, failure evidence, scope, recovery, and residual uncertainty. Use simplicity as a tie-breaker after safety sufficiency. Explain the winner, concrete rejections, tradeoffs, and residual risks without numerical scores.
+
+Boundary: work read-only. Do not select an ineligible plan or downgrade a critical unresolved choice into an ordinary residual risk.
+
+Output: winnerPlanId must name one supplied eligible plan; return only the schema-constrained Decision Artifact.
 
 Contract:
 ${data(contract)}
@@ -106,9 +148,16 @@ export function judgeCorrectionPrompt(
   eligibility: PlanEligibility[],
   decision: DecisionArtifact,
 ): string {
-  return `[CHANGESAFELY_ROLE:judge]
+  return `${roleHeader("judge")}
 [CHANGESAFELY_CORRECTION]
-You are the same ChangeSafely Judge correcting one decision artifact. Every supplied plan already passed deterministic scope and approval gates. Distinguish a residual risk or future policy question from an approval that is actually required before this selected plan can run. Keep humanDecisionRequired true only when a concrete unresolved choice changes the selected implementation now; otherwise set it false and retain the concern under residualRisks. Keep winnerPlanId limited to the supplied eligible plans. Return only the complete corrected schema-constrained JSON object.
+
+Objective: correct the same Judge decision once after deterministic decision validation.
+
+Directions: every supplied plan already passed scope and approval gates. Keep humanDecisionRequired only when an unresolved choice changes the selected implementation now; retain non-blocking concerns as residual risks. Preserve critical safety concerns and select only a supplied eligible plan.
+
+Boundary: work read-only. Do not invent approval requirements or hide a blocking decision.
+
+Output: return only the complete corrected Decision Artifact.
 
 Contract:
 ${data(contract)}
@@ -119,7 +168,7 @@ ${data(plans)}
 Eligibility:
 ${data(eligibility)}
 
-First decision:
+Rejected decision:
 ${data(decision)}`;
 }
 
@@ -130,13 +179,18 @@ export function testAuthorPrompt(
   allowedTestPaths: string[],
   capabilities: RepositoryCapabilities,
 ): string {
-  return `[CHANGESAFELY_ROLE:test-author]
-You are ChangeSafely Test Author, forked directly from C0. Work as the only writer with network off. Create the minimum meaningful safety harness before production implementation.
+  return `${roleHeader("test-author")}
 
-You may change only these repository-relative test or fixture paths/prefixes:
+Objective: build the strongest available pre-implementation safety harness required by the selected plan.
+
+Directions: prefer functional checks through stable boundaries. ${RISK_DIRECTIONS} Cover the required delta and protected behavior with observable assertions grounded in the task or repository. For preservation or refactoring evidence, the declared baseline outcome may pass; for a missing behavior, it must fail for that intended reason. Append coverage or create focused test/fixture files without rewriting existing tests. targetedCommand must copy one selected-plan kind-test command verbatim from the catalog. protectedPaths must include every changed path.
+
+Boundary: you are the only writer and network is off. Change only the allowed test/fixture scope below. Do not change production code, manifests, lockfiles, instructions, public behavior, existing test lines, or secret/config files. Do not use skip, only, weak assertions, or mocks of the behavior being proved. Stop rather than invent an unsupported oracle.
+
+Output: return only the schema-constrained Harness Artifact after editing.
+
+Allowed test and fixture paths/prefixes:
 ${data(allowedTestPaths)}
-
-Do not change production code, manifests, lockfiles, instruction files, existing test lines, existing public behavior, or secret/config files; only append coverage or create new test/fixture files. Do not use skip, only, weak assertions, or excessive mocks. targetedCommand must exactly match argv and cwd from one selected-plan safety test and a catalog check whose kind is test. Never substitute another command or add forwarded arguments. For a new feature, the new targeted acceptance check must fail on baseline for the expected missing behavior. expectedFailure is a concise human explanation of that missing behavior, not a required literal output substring. Run no deployment or external command. After editing, return only the schema-constrained Harness Artifact. protectedPaths must contain every path you changed.
 
 Repository capability catalog:
 ${data(capabilities)}
@@ -158,13 +212,17 @@ export function implementerPrompt(
   testCommit: string,
   protectedPaths: string[],
 ): string {
-  return `[CHANGESAFELY_ROLE:implementer]
-You are ChangeSafely Implementer, forked directly from C0 rather than from any Planner or Test Author transcript. Work as the only writer with network off. Implement exactly one selected plan.
+  return `${roleHeader("implementer")}
 
-The protected safety harness is commit ${testCommit}. These paths are immutable and must not be edited, deleted, renamed, staged differently, or weakened:
+Objective: implement the selected plan with the smallest sufficient production delta.
+
+Directions: satisfy the contract and protected harness without opportunistic cleanup, redesign, speculative abstractions, or behavior outside the selected plan. Report every changed path, added test, scope note, and residual risk.
+
+Boundary: you are the only writer and network is off. You forked from C0, not a Planner or Test Author transcript. The protected harness commit is ${testCommit}; do not edit, delete, rename, stage differently, or weaken these paths:
 ${data(protectedPaths)}
+Do not introduce unplanned dependencies, migrations, API changes, permissions, secrets, deployment actions, or paths. If the contract, harness, or scope cannot support a safe implementation, make no speculative change and report the blocking issue.
 
-Do not add dependencies, migrations, public API changes, permissions, secrets, deployment actions, skip/only, or paths outside the plan. You may add a separate test file only when the selected plan explicitly requires it. Run no external or production command. If the plan cannot be implemented within scope, make no speculative expansion and explain the problem in the artifact. After editing, return only the schema-constrained Implementation Artifact and list every changed path.
+Output: return only the schema-constrained Implementation Artifact after editing.
 
 Contract:
 ${data(contract)}
@@ -187,10 +245,15 @@ export function verifierPrompt(input: {
   implementationDiff: string;
   commandResults: unknown;
 }): string {
-  return `[CHANGESAFELY_ROLE:verifier]
-You are ChangeSafely independent Verifier, forked directly from C0. Work read-only and network-off. You do not have the Implementer transcript or self-assessment.
+  return `${roleHeader("verifier")}
 
-Decide from the original contract, selected plan, separate B0-to-T1 safety-harness diff, separate T1-to-I1 implementation diff, protected harness, and deterministic command results. T1 test additions are an intentional required workflow phase: assess whether they are meaningful and within the Test Author boundary, but do not count them as Implementer scope expansion. Assess implementation scope only from the T1-to-I1 diff. Reject when any contract item is unmet, invariant lacks available evidence, implementation scope exceeds the plan, a protected test changed after T1, or any required command failed. A failing harnessBaseline command is expected evidence for a new behavior when the Harness Artifact declares expectedBaselineOutcome "fail"; do not treat that expected failure as an environment defect. Findings must be concrete. Use an empty path only for repository-wide findings. Return only the schema-constrained Verification Artifact.
+Objective: independently try to falsify the claim that the implemented change is safe.
+
+Directions: inspect the original contract, selected plan, B0-to-T1 harness diff, T1-to-I1 implementation diff, protected harness evidence, and deterministic results. ${RISK_DIRECTIONS} Look beyond the edited lines for affected callers, state, side effects, failures, and unrelated behavior. Identify plausible green-but-wrong behavior and require executable evidence for every contract item and protected invariant. Treat T1 test additions as the required Test Author phase, not Implementer scope; assess production scope only from T1 to I1. An expected red baseline command is evidence, not an environment defect.
+
+Boundary: work read-only and network-off from a fresh C0 fork without the Implementer transcript. Reject unmet requirements, insufficient evidence, unplanned production scope, changed protected tests, failed commands, or a residual risk that affects required behavior. Findings must be concrete; use an empty path only for repository-wide findings.
+
+Output: return only the schema-constrained Verification Artifact.
 
 Verification input:
 ${data(input)}`;
@@ -202,13 +265,16 @@ export function repairPrompt(input: {
   verification: unknown;
   protectedPaths: string[];
 }): string {
-  return `[CHANGESAFELY_ROLE:repair]
-You are the same ChangeSafely Implementer resumed for one bounded repair. Work as the only writer with network off. Fix only the concrete local Verifier findings below, within the already selected plan.
+  return `${roleHeader("repair")}
 
-Protected T1 paths remain immutable:
+Objective: as the same Implementer, fix only a concrete local implementation defect identified by Verifier.
+
+Directions: make the smallest correction inside the selected plan and report every changed path and remaining risk. If the finding originates in the contract, harness, or scope, make no code change and report that it requires re-contract, Test Author correction, or replan.
+
+Boundary: you are the only writer and network is off. Do not broaden scope, add dependencies, rewrite history, address unrelated issues, or modify these protected harness paths:
 ${data(input.protectedPaths)}
 
-Do not broaden scope, add dependencies, modify protected files, rewrite history, or address unrelated issues. If the finding cannot be fixed locally within the selected plan, make no change. Return only the schema-constrained Implementation Artifact and list every path changed by this repair.
+Output: return only the schema-constrained Implementation Artifact after the bounded repair.
 
 Contract:
 ${data(input.contract)}

@@ -68,6 +68,7 @@ const traceEventSchema = Type.Object(
       Type.Array(Type.String({ minLength: 1, maxLength: 1000 }), { maxItems: 12 }),
     ),
     promptSha256: Type.Optional(Type.String({ pattern: SHA256_PATTERN })),
+    promptBytes: Type.Optional(Type.Integer({ minimum: 0 })),
     outputSchemaSha256: Type.Optional(Type.String({ pattern: SHA256_PATTERN })),
     model: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
     effort: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
@@ -92,6 +93,7 @@ const roleProvenanceSchema = Type.Object(
     effort: Type.String({ minLength: 1, maxLength: 100 }),
     sandboxPolicy: Type.String({ minLength: 1, maxLength: 100 }),
     promptSha256: Type.String({ pattern: SHA256_PATTERN }),
+    promptBytes: Type.Optional(Type.Integer({ minimum: 0 })),
     outputSchemaSha256: Type.Optional(Type.String({ pattern: SHA256_PATTERN })),
   },
   { additionalProperties: false },
@@ -162,6 +164,7 @@ export interface TraceEvent {
   errorType?: string;
   stack?: string[];
   promptSha256?: string;
+  promptBytes?: number;
   outputSchemaSha256?: string;
   model?: string;
   effort?: string;
@@ -185,6 +188,7 @@ export interface RoleProvenance {
   effort: string;
   sandboxPolicy: string;
   promptSha256: string;
+  promptBytes?: number;
   outputSchemaSha256?: string;
 }
 
@@ -702,10 +706,12 @@ export function promptEvidence(
   outputSchema?: object,
 ): {
   promptSha256: string;
+  promptBytes: number;
   outputSchemaSha256?: string;
 } {
   return {
     promptSha256: sha256(prompt),
+    promptBytes: Buffer.byteLength(prompt),
     ...(outputSchema ? { outputSchemaSha256: sha256(JSON.stringify(outputSchema)) } : {}),
   };
 }
